@@ -1,0 +1,12 @@
+node_modules
+dist
+.vite
+.git
+.gitignore
+.venv
+__pycache__
+*.py[cod]
+*.sqlite3
+.pytest_cache
+.env
+.DS_Store

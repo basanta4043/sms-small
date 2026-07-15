@@ -1,0 +1,14 @@
+.pytest_cache/
+.venv/
+dist/
+dists/
+node_modules/
+*.egg-info
+*.log
+coverage/
+.vite/
+.env
+.env.*
+.DS_Store
+.vscode/
+.idea/
