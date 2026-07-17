@@ -1,13 +1,10 @@
 import os
-from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from app.auth import create_access_token, decode_access_token, hash_password, verify_password
 from app.database import (
@@ -59,24 +56,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(CloudflareProxyMiddleware)
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DIST_DIR = PROJECT_ROOT / "dist"
-INDEX_HTML = DIST_DIR / "index.html"
-
-if DIST_DIR.exists():
-    # Mount only the assets directory to serve JS/CSS with correct MIME types.
-    assets_dir = DIST_DIR / "assets"
-    if assets_dir.exists():
-        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
-
-
-@app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], include_in_schema=False)
-async def redirect_api_prefix(request: Request, path: str) -> RedirectResponse:
-    stripped_path = f"/{path}" if path else "/"
-    target = request.url.replace(path=stripped_path)
-    return RedirectResponse(url=str(target), status_code=307)
-
 
 class RegisterPayload(BaseModel):
     username: str
@@ -206,10 +185,8 @@ def health() -> dict[str, str]:
 
 
 @app.get("/")
-def serve_frontend() -> Response:
-    if INDEX_HTML.exists():
-        return FileResponse(INDEX_HTML)
-    return HTMLResponse("<!doctype html><html><body><h1>School Manager</h1><p>Frontend build not found.</p></body></html>")
+def root() -> dict[str, str]:
+    return {"message": "School Manager API", "status": "ok"}
 
 
 
@@ -259,19 +236,6 @@ def login(payload: LoginPayload) -> dict[str, object]:
         },
         "school": school,
     }
-
-
-# Fallback for SPA routes (GET only). Keep after API routes so it doesn't
-# intercept `/api/...` POST/PUT requests. It will serve `index.html` for
-# browser navigation paths like `/login` or `/dashboard`.
-@app.get("/{path:path}", include_in_schema=False)
-def spa_fallback(path: str, request: Request) -> Response:
-    # Do not handle API or assets paths here
-    if path.startswith("api") or path.startswith("assets"):
-        raise HTTPException(status_code=404)
-    if INDEX_HTML.exists():
-        return FileResponse(INDEX_HTML)
-    return HTMLResponse("<!doctype html><html><body><h1>School Manager</h1><p>Frontend build not found.</p></body></html>")
 
 
 def get_current_user(authorization: Annotated[str | None, Header()] = None) -> dict[str, object]:
@@ -431,7 +395,3 @@ def delete_student(student_id: int, user: Annotated[dict[str, object], Depends(g
     return {"deleted": True}
 
 
-if DIST_DIR.exists():
-    assets_dir = DIST_DIR / "assets"
-    if assets_dir.exists():
-        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
