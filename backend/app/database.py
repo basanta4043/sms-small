@@ -8,7 +8,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "schooldb")
 DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = "Test@123"
+DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 
 def _connection_kwargs(dbname: str | None = None) -> dict[str, Any]:
     return {
