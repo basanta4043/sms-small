@@ -15,12 +15,7 @@ function FeeStructureForm({ initial, onSave, onClose }) {
     if (!className.trim()) return;
     const cleanItems = items.filter((it) => it.name.trim()).map((it) => ({ name: it.name.trim(), amount: Number(it.amount) || 0 }));
     const total = cleanItems.reduce((s, it) => s + it.amount, 0);
-    const saveData = { className: className.trim(), items: cleanItems, total };
-    if (initial?.id) {
-      // Only include ID if we're editing an existing item
-      saveData.id = initial.id;
-    }
-    onSave(saveData);
+    onSave({ id: initial?.id || uid(), className: className.trim(), items: cleanItems, total });
   }
   return (
     <Modal title={initial ? "Edit fee structure" : "Add fee structure"} onClose={onClose}>
