@@ -61,6 +61,8 @@ class RegisterPayload(BaseModel):
     username: str
     password: str
     school_name: str = ""
+    is_school_user: bool = False
+    manager_username: str | None = None
 
 
 class LoginPayload(BaseModel):
@@ -202,7 +204,13 @@ def register(payload: RegisterPayload) -> dict[str, object]:
     if get_user_by_username(username):
         raise HTTPException(status_code=409, detail="Username already exists")
 
-    user = create_user(username=username, password_hash=hash_password(payload.password), school_name=school_name)
+    user = create_user(
+        username=username,
+        password_hash=hash_password(payload.password),
+        school_name=school_name,
+        is_school_user=payload.is_school_user,
+        manager_username=payload.manager_username,
+    )
     school = get_school_for_user(user["id"]) or {"name": school_name, "address": None, "currency": "Rs.", "logo_url": None, "phone": None, "email": None, "website": None}
     token = create_access_token(str(user["id"]))
     return {
@@ -212,6 +220,8 @@ def register(payload: RegisterPayload) -> dict[str, object]:
             "id": user["id"],
             "username": user["username"],
             "school_name": user["school_name"],
+            "is_school_user": user.get("is_school_user", False),
+            "manager_id": user.get("manager_id"),
         },
         "school": school,
     }
@@ -233,6 +243,8 @@ def login(payload: LoginPayload) -> dict[str, object]:
             "id": user["id"],
             "username": user["username"],
             "school_name": user["school_name"],
+            "is_school_user": user.get("is_school_user", False),
+            "manager_id": user.get("manager_id"),
         },
         "school": school,
     }

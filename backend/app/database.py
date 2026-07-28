@@ -49,10 +49,14 @@ def init_schema() -> None:
                     username TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     school_name TEXT NOT NULL DEFAULT '',
+                    is_school_user BOOLEAN NOT NULL DEFAULT FALSE,
+                    manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
                 """
             )
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_school_user BOOLEAN NOT NULL DEFAULT FALSE")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL")
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS schools (
@@ -163,13 +167,27 @@ def init_schema() -> None:
         conn.close()
 
 
-def create_user(username: str, password_hash: str, school_name: str = "", school_details: dict[str, Any] | None = None) -> dict[str, Any]:
+def create_user(
+    username: str,
+    password_hash: str,
+    school_name: str = "",
+    school_details: dict[str, Any] | None = None,
+    is_school_user: bool = False,
+    manager_id: int | None = None,
+    manager_username: str | None = None,
+) -> dict[str, Any]:
+    resolved_manager_id = manager_id
+    if resolved_manager_id is None and manager_username:
+        manager_user = get_user_by_username(manager_username.strip())
+        if manager_user:
+            resolved_manager_id = int(manager_user["id"])
+
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                "INSERT INTO users (username, password_hash, school_name) VALUES (%s, %s, %s) RETURNING id, username, school_name, created_at",
-                (username, password_hash, school_name),
+                "INSERT INTO users (username, password_hash, school_name, is_school_user, manager_id) VALUES (%s, %s, %s, %s, %s) RETURNING id, username, school_name, is_school_user, manager_id, created_at",
+                (username, password_hash, school_name, is_school_user, resolved_manager_id),
             )
             row = cur.fetchone()
             user_id = row["id"]
@@ -201,7 +219,7 @@ def get_user_by_username(username: str) -> dict[str, Any] | None:
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                "SELECT id, username, password_hash, school_name, created_at FROM users WHERE username = %s",
+                "SELECT id, username, password_hash, school_name, is_school_user, manager_id, created_at FROM users WHERE username = %s",
                 (username,),
             )
             row = cur.fetchone()
@@ -215,7 +233,7 @@ def get_user_by_id(user_id: str | int) -> dict[str, Any] | None:
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                "SELECT id, username, school_name, created_at FROM users WHERE id = %s",
+                "SELECT id, username, school_name, is_school_user, manager_id, created_at FROM users WHERE id = %s",
                 (int(user_id),),
             )
             row = cur.fetchone()

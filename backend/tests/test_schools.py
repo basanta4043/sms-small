@@ -41,3 +41,23 @@ def test_auth_me_returns_school_details() -> None:
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["school"]["name"] == "Everest Valley School"
+
+
+def test_register_persists_school_user_and_manager() -> None:
+    manager = create_user(username="manageruser", password_hash="hashed", school_name="Everest Valley School")
+
+    response = client.post(
+        "/auth/register",
+        json={
+            "username": "staffuser",
+            "password": "secret123",
+            "school_name": "Everest Valley School",
+            "is_school_user": True,
+            "manager_username": "manageruser",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["user"]["is_school_user"] is True
+    assert payload["user"]["manager_id"] == manager["id"]

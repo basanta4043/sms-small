@@ -10,6 +10,8 @@ export default function AuthGate({ onReady }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+  const [isSchoolUser, setIsSchoolUser] = useState(false);
+  const [managerUsername, setManagerUsername] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -36,7 +38,13 @@ export default function AuthGate({ onReady }) {
     try {
       const data = await api("/auth/register", {
         method: "POST",
-        body: { username: username.trim(), password, school_name: schoolName.trim() },
+        body: {
+          username: username.trim(),
+          password,
+          school_name: schoolName.trim(),
+          is_school_user: isSchoolUser,
+          manager_username: managerUsername.trim() || undefined,
+        },
       });
       window.localStorage.setItem("sm_token", data.access_token);
       onReady(data.user, data.access_token, camelizeKeys(data.school || {}));
@@ -92,6 +100,15 @@ export default function AuthGate({ onReady }) {
             <Field label="Confirm password">
               <input className="sm-input" type="password" value={password2} onChange={(e) => setPassword2(e.target.value)} />
             </Field>
+            <label className="sm-checkbox-row" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <input type="checkbox" checked={isSchoolUser} onChange={(e) => setIsSchoolUser(e.target.checked)} />
+              <span>Is school user</span>
+            </label>
+            {isSchoolUser && (
+              <Field label="Manager username">
+                <input className="sm-input" value={managerUsername} onChange={(e) => setManagerUsername(e.target.value)} placeholder="Select manager by username" />
+              </Field>
+            )}
             <button className="sm-btn sm-btn-gold sm-btn-block" disabled={busy}><UserPlus size={16} /> Create admin account</button>
           </form>
         </div>

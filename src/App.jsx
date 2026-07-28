@@ -153,7 +153,7 @@ export default function App() {
         const { api } = await import("./api/client");
         const authData = await api("/auth/me", { token });
         const schoolData = camelizeKeys(authData.school || {});
-        setAuth(authData.user);
+        setAuth(camelizeKeys(authData.user || {}));
         setLoggedIn(true);
         setSchoolState((prev) => ({
           ...prev,
@@ -275,7 +275,7 @@ export default function App() {
 
   const handleLoginReady = (user, tokenValue, schoolData) => {
     const normalizedSchool = camelizeKeys(schoolData || {});
-    setAuth(user || null);
+    setAuth(camelizeKeys(user || {}));
     setLoggedIn(true);
     setToken(tokenValue);
     setSchoolState((prev) => ({
@@ -322,6 +322,7 @@ export default function App() {
 
   if (!loaded) return <div className="sm-auth-wrap"><p style={{ color: "var(--slate)" }}>Loading your school's data…</p></div>;
 
+  const isSchoolUser = Boolean(auth?.isSchoolUser || auth?.is_school_user);
   const totalStudents = students.length;
   const activeStudents = students.filter((s) => s.status === "Active").length;
   const totalCollected = feeData.payments.reduce((s, p) => s + p.amount, 0);
@@ -371,23 +372,32 @@ export default function App() {
             </div>
             <div className="sm-content">
               {tab === "dashboard" && (
-                <div>
-                  <div className="sm-stat-grid">
-                    <div className="sm-stat"><div className="sm-stat-label">Total students</div><div className="sm-stat-value sm-display">{totalStudents}</div></div>
-                    <div className="sm-stat"><div className="sm-stat-label">Active students</div><div className="sm-stat-value sm-display">{activeStudents}</div></div>
-                    <div className="sm-stat"><div className="sm-stat-label">Fees collected</div><div className="sm-stat-value sm-display">{school.currency}{totalCollected}</div></div>
-                    <div className="sm-stat"><div className="sm-stat-label">Fees due</div><div className="sm-stat-value sm-display" style={{ color: totalDue > 0 ? "var(--rust)" : undefined }}>{school.currency}{totalDue}</div></div>
-                  </div>
+                isSchoolUser ? (
                   <div className="sm-panel" style={{ padding: 22 }}>
-                    <h3 className="sm-display" style={{ marginTop: 0 }}>Getting started</h3>
+                    <h3 className="sm-display" style={{ marginTop: 0 }}>Dashboard is empty for this account</h3>
                     <p style={{ color: "var(--slate)", fontSize: 14, lineHeight: 1.6 }}>
-                      1. Add your students in the <strong>Students</strong> tab.<br />
-                      2. Set fee amounts per class in <strong>Fees → Fee structure</strong>.<br />
-                      3. Collect payments — invoices are generated automatically and printable from <strong>Invoices</strong>.<br />
-                      4. Create an exam in <strong>Exams</strong>, enter marks in <strong>Results</strong>, and print report cards from <strong>Gradesheets</strong>.
+                      School-user accounts do not show dashboard numbers, logs, or charts. Use the other tabs for your work and wait for your manager to approve leave requests.
                     </p>
                   </div>
-                </div>
+                ) : (
+                  <div>
+                    <div className="sm-stat-grid">
+                      <div className="sm-stat"><div className="sm-stat-label">Total students</div><div className="sm-stat-value sm-display">{totalStudents}</div></div>
+                      <div className="sm-stat"><div className="sm-stat-label">Active students</div><div className="sm-stat-value sm-display">{activeStudents}</div></div>
+                      <div className="sm-stat"><div className="sm-stat-label">Fees collected</div><div className="sm-stat-value sm-display">{school.currency}{totalCollected}</div></div>
+                      <div className="sm-stat"><div className="sm-stat-label">Fees due</div><div className="sm-stat-value sm-display" style={{ color: totalDue > 0 ? "var(--rust)" : undefined }}>{school.currency}{totalDue}</div></div>
+                    </div>
+                    <div className="sm-panel" style={{ padding: 22 }}>
+                      <h3 className="sm-display" style={{ marginTop: 0 }}>Getting started</h3>
+                      <p style={{ color: "var(--slate)", fontSize: 14, lineHeight: 1.6 }}>
+                        1. Add your students in the <strong>Students</strong> tab.<br />
+                        2. Set fee amounts per class in <strong>Fees → Fee structure</strong>.<br />
+                        3. Collect payments — invoices are generated automatically and printable from <strong>Invoices</strong>.<br />
+                        4. Create an exam in <strong>Exams</strong>, enter marks in <strong>Results</strong>, and print report cards from <strong>Gradesheets</strong>.
+                      </p>
+                    </div>
+                  </div>
+                )
               )}
               {tab === "students" && <StudentsTab students={students} setStudents={setStudentsState} token={token} />}
               {tab === "fees" && <FeesTab students={students} feeData={feeData} setFeeData={setFeeDataState} currency={school.currency} token={token} onOpenInvoice={setInvoiceView} />}

@@ -14,3 +14,7 @@ coverage/
 .idea/
 CLAUDE.md
 .claude/
+__pycache__/
+*/*.pyc
+*/__pycache__/
+*.pyc
