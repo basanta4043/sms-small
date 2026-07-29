@@ -5,14 +5,14 @@ import { api } from "../../api/client";
 import { camelizeKeys } from "../../utils/helpers";
 
 export default function ResultsTab({ exams, students, results, setResults, token }) {
-  const [examId, setExamId] = useState(exams[0]?.id || "");
-  const exam = exams.find((e) => e.id === examId);
+  const [examId, setExamId] = useState(exams[0]?.id != null ? String(exams[0].id) : "");
+  const exam = exams.find((e) => String(e.id) === String(examId));
   const classStudents = exam ? students.filter((s) => String(s.className || "").trim().toLowerCase() === String(exam.className || "").trim().toLowerCase()) : [];
   const [studentId, setStudentId] = useState("");
   const [marks, setMarks] = useState({});
   const [err, setErr] = useState("");
 
-  useEffect(() => { setExamId(exams[0]?.id || ""); }, [exams.length]);
+  useEffect(() => { setExamId(exams[0]?.id != null ? String(exams[0].id) : ""); }, [exams.length]);
   useEffect(() => { setStudentId(""); setMarks({}); }, [examId]);
 
   function openEntry(sId) {
@@ -78,7 +78,7 @@ export default function ResultsTab({ exams, students, results, setResults, token
                       cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, textAlign: "left"
                     }}>
                     <span>{s.name}</span>
-                    {existingResultIds.has(s.id) ? <span className="sm-pill sm-pill-sage">Entered</span> : <ChevronRight size={14} color="var(--slate)" />}
+                    {existingResultIds.has(String(s.id)) ? <span className="sm-pill sm-pill-sage">Entered</span> : <ChevronRight size={14} color="var(--slate)" />}
                   </button>
                 ))}
               </div>

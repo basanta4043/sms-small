@@ -249,18 +249,18 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
 }
 
 export default function GradesheetsTab({ exams, students, results, gradeScale, school, token }) {
-  const [examId, setExamId] = useState(exams[0]?.id || "");
+  const [examId, setExamId] = useState(exams[0]?.id != null ? String(exams[0].id) : "");
   const [doc, setDoc] = useState(null);
   const [err, setErr] = useState("");
-  const exam = exams.find((e) => e.id === examId);
+  const exam = exams.find((e) => String(e.id) === String(examId));
   const classStudents = exam ? students.filter((s) => String(s.className || "").trim().toLowerCase() === String(exam.className || "").trim().toLowerCase()) : [];
 
-  useEffect(() => { setExamId(exams[0]?.id || ""); }, [exams.length]);
+  useEffect(() => { setExamId(exams[0]?.id != null ? String(exams[0].id) : ""); }, [exams.length]);
 
   async function view(sId) {
     setErr("");
     try {
-      const student = classStudents.find((s) => s.id === sId);
+      const student = classStudents.find((s) => String(s.id) === String(sId));
       const data = await api(`/gradesheets/${examId}/${sId}`, { token });
       const report = data.report || computeReport(exam, student, null, gradeScale);
       setDoc({ student, report, sheet: data.sheet, gradeScale });
