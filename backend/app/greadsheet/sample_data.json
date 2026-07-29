@@ -1,0 +1,39 @@
+{
+    "school": {
+        "name": "MALAGIREE ENGLISH BOARDING SCHOOL",
+        "address": "Tahoon, Palpa",
+        "contact": "Contact No. ",
+        "logo_path": "",
+        "badge_path": "",
+        "exam_title": "ANNUAL EXAMINATION",
+        "exam_year": "2082"
+    },
+    "student": {
+        "name": "Isha Shrestha",
+        "class": "5",
+        "section": "A",
+        "roll_no": "01"
+    },
+    "subjects": [
+        {"name": "ESSENTIAL ENGLISH READER", "credit_hour": 5, "th_grade": "A+", "pr_grade": "A+", "final_grade": "A+", "grade_point": 4, "total_marks": 98, "highest_marks": 100},
+        {"name": "C. NEPALI", "credit_hour": 5, "th_grade": "A+", "pr_grade": "A+", "final_grade": "A+", "grade_point": 4, "total_marks": 96, "highest_marks": 97},
+        {"name": "C. MATHEMATICS", "credit_hour": 5, "th_grade": "A+", "pr_grade": "A+", "final_grade": "A+", "grade_point": 4, "total_marks": 98, "highest_marks": 99},
+        {"name": "SCIENCE AND TECHNOLOGY", "credit_hour": 5, "th_grade": "A+", "pr_grade": "A+", "final_grade": "A+", "grade_point": 4, "total_marks": 94, "highest_marks": 99},
+        {"name": "SOCIAL STUDIES AND HUMAN VALUE EDUCATION", "credit_hour": 5, "th_grade": "A+", "pr_grade": "A+", "final_grade": "A+", "grade_point": 4, "total_marks": 98, "highest_marks": 99},
+        {"name": "COMPUTER SCIENCE", "credit_hour": 2.5, "th_grade": "A+", "pr_grade": "A+", "final_grade": "A+", "grade_point": 4, "total_marks": 95, "highest_marks": 100},
+        {"name": "GENERAL KNOWLEDGE", "credit_hour": 5, "th_grade": "A+", "pr_grade": "A+", "final_grade": "A+", "grade_point": 4, "total_marks": 49, "highest_marks": 50}
+    ],
+    "summary": {
+        "attendance": "230/237",
+        "rank": 4,
+        "rank_section": 1,
+        "extracurricular_grade": "A+",
+        "teacher_views": "Outstanding result! Keep it up."
+    },
+    "footer": {
+        "result_issue_date": "2082-12-30",
+        "class_teacher": "",
+        "exam_controller": "",
+        "principal": ""
+    }
+}

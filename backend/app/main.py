@@ -139,6 +139,20 @@ def _grade_for_percentage(pct: float) -> dict[str, Any]:
     return {"grade": "F", "remark": "Fail"}
 
 
+def _grade_point_for_grade(grade: str | None) -> float:
+    mapping = {
+        "A+": 4.0,
+        "A": 3.6,
+        "B+": 3.2,
+        "B": 2.8,
+        "C+": 2.4,
+        "C": 2.0,
+        "D": 1.6,
+        "F": 0.0,
+    }
+    return mapping.get(str(grade or "").strip(), 0.0)
+
+
 def _build_gradesheet_report(exam: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
     exam_subjects = exam.get("subjects", []) or []
     rows = []
@@ -170,6 +184,60 @@ def _build_gradesheet_report(exam: dict[str, Any], result: dict[str, Any]) -> di
         "overallPct": round(overall_pct, 1),
         "overall": {"grade": overall_info["grade"], "remark": overall_info["remark"]},
         "allPass": all_pass,
+    }
+
+
+def _build_gradesheet_sheet(exam: dict[str, Any], student: dict[str, Any] | None, report: dict[str, Any], school: dict[str, Any] | None) -> dict[str, Any]:
+    subjects = []
+    for row in report.get("rows", []):
+        subjects.append(
+            {
+                "name": row.get("subject") or "",
+                "credit_hour": 1,
+                "th_grade": row.get("grade") or "",
+                "pr_grade": row.get("grade") or "",
+                "final_grade": row.get("grade") or "",
+                "grade_point": round(_grade_point_for_grade(row.get("grade")), 2),
+                "total_marks": row.get("obtained", 0),
+                "highest_marks": row.get("maxMarks", 0),
+            }
+        )
+
+    overall = report.get("overall", {})
+    summary = {
+        "gpa": round(_grade_point_for_grade(overall.get("grade")), 2),
+        "total_marks": report.get("totalObtained", 0),
+        "highest_total": report.get("totalMax", 0),
+        "percentage": report.get("overallPct", 0),
+        "attendance": "",
+        "rank": "",
+        "rank_section": "",
+        "extracurricular_grade": overall.get("grade", ""),
+        "teacher_views": f"{overall.get('remark', '')} — {'PASS' if report.get('allPass') else 'NEEDS ATTENTION'}",
+    }
+
+    return {
+        "school": {
+            "name": (school or {}).get("name") or "",
+            "address": (school or {}).get("address") or "",
+            "contact": (school or {}).get("phone") or (school or {}).get("email") or "",
+            "exam_title": exam.get("name", "ANNUAL EXAMINATION"),
+            "exam_year": exam.get("term") or "",
+        },
+        "student": {
+            "name": (student or {}).get("name") or "",
+            "class": (student or {}).get("class_name") or "",
+            "section": (student or {}).get("section") or "",
+            "roll_no": (student or {}).get("roll_no") or "",
+        },
+        "subjects": subjects,
+        "summary": summary,
+        "footer": {
+            "result_issue_date": "",
+            "class_teacher": "",
+            "exam_controller": "",
+            "principal": "",
+        },
     }
 
 
@@ -376,7 +444,13 @@ def get_gradesheet(exam_id: int, student_id: int, user: Annotated[dict[str, obje
     result = get_result_for_user(user["id"], exam_id, student_id)
     if not result:
         raise HTTPException(status_code=404, detail="Result not found")
-    return {"exam": exam, "result": result, "report": _build_gradesheet_report(exam, result)}
+
+    school = get_school_for_user(user["id"]) or {"name": user.get("school_name", ""), "address": None, "currency": "Rs.", "logo_url": None, "phone": None, "email": None, "website": None}
+    students = get_students_for_user(user["id"])
+    student = next((item for item in students if str(item.get("id")) == str(student_id)), None)
+    report = _build_gradesheet_report(exam, result)
+    sheet = _build_gradesheet_sheet(exam, student, report, school)
+    return {"exam": exam, "result": result, "report": report, "sheet": sheet}
 
 
 @app.get("/students")

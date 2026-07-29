@@ -21,54 +21,225 @@ function computeReport(exam, student, result, gradeScale) {
   return { rows, totalMax, totalObtained, overallPct, overall, allPass };
 }
 
-function GradesheetDoc({ exam, student, report, school, onClose }) {
+function gradePointForGrade(grade) {
+  const mapping = {
+    "A+": 4.0,
+    A: 3.6,
+    "B+": 3.2,
+    B: 2.8,
+    "C+": 2.4,
+    C: 2.0,
+    D: 1.6,
+    F: 0.0,
+  };
+  return mapping[String(grade || "").trim()] ?? 0.0;
+}
+
+function buildSheetData(exam, student, report, school) {
+  const subjectRows = (report?.rows || []).map((row, idx) => ({
+    name: row.subject || `Subject ${idx + 1}`,
+    credit_hour: 1,
+    th_grade: row.grade,
+    pr_grade: row.grade,
+    final_grade: row.grade,
+    grade_point: Number(gradePointForGrade(row.grade).toFixed(2)),
+    total_marks: row.obtained,
+    highest_marks: row.maxMarks,
+  }));
+
+  const overallGrade = report?.overall?.grade || "";
+  return {
+    school: {
+      name: school?.name || "Your School",
+      address: school?.address || "",
+      contact: school?.phone || school?.email || "",
+      exam_title: exam?.name || "ANNUAL EXAMINATION",
+      exam_year: exam?.term || "",
+    },
+    student: {
+      name: student?.name || "",
+      class: student?.className || student?.class || "",
+      section: student?.section || "",
+      roll_no: student?.rollNo || student?.roll_no || "",
+    },
+    subjects: subjectRows,
+    summary: {
+      gpa: Number(gradePointForGrade(overallGrade).toFixed(2)),
+      total_marks: report?.totalObtained || 0,
+      highest_total: report?.totalMax || 0,
+      percentage: report?.overallPct || 0,
+      attendance: "",
+      rank: "",
+      rank_section: "",
+      extracurricular_grade: overallGrade,
+      teacher_views: `${report?.overall?.remark || ""} — ${report?.allPass ? "PASS" : "NEEDS ATTENTION"}`,
+    },
+    footer: {
+      result_issue_date: "",
+      class_teacher: "",
+      exam_controller: "",
+      principal: "",
+    },
+  };
+}
+
+function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClose }) {
+  const sheetData = sheet || buildSheetData(exam, student, report, school);
+  const scaleRows = (gradeScale || []).map((row, idx) => {
+    const next = gradeScale[idx + 1];
+    const min = row.min;
+    const upper = next ? next.min - 1 : 100;
+    const interval = min >= 90 ? `${min}% to 100%` : `${min}% to Below ${upper}%`;
+    return {
+      interval,
+      point: Number(row.min ? (row.min / 25).toFixed(1) : 0).toString(),
+      grade: row.grade,
+      remark: row.remark,
+    };
+  });
+
   return (
     <Modal title="" onClose={onClose} wide>
       <div className="sm-no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
         <button className="sm-btn sm-btn-gold" onClick={() => window.print()}><Printer size={15} /> Print</button>
       </div>
       <div className="sm-print-area">
-        <div className="sm-print-doc">
-          <div className="sm-print-head">
-            <div>
-              <div className="sm-display" style={{ fontSize: 20 }}>{school.name || "Your School"}</div>
-              <div style={{ fontSize: 12, color: "var(--slate)" }}>Grade Sheet — {exam.name}{exam.term ? ` (${exam.term})` : ""}</div>
+        <div className="sm-print-doc" style={{ padding: 0 }}>
+          <style>{`
+            .gradesheet-page {
+              width: 100%;
+              background: #fff;
+              color: #111;
+              border: 1px solid #e2e8f0;
+              box-sizing: border-box;
+              padding: 12mm 15mm 14mm;
+              font-family: Arial, Helvetica, sans-serif;
+            }
+            .gradesheet-header { text-align: center; margin-bottom: 6mm; }
+            .gradesheet-school-name { font-size: 20px; font-weight: 700; margin-bottom: 1mm; }
+            .gradesheet-school-meta { font-size: 10px; color: #334155; margin-bottom: 1mm; }
+            .gradesheet-exam-title { font-size: 15px; font-weight: 700; margin-top: 3mm; }
+            .gradesheet-exam-year { font-size: 11px; font-weight: 700; margin-top: 1mm; }
+            .gradesheet-label { display: inline-block; margin-top: 4mm; padding: 2mm 8mm; border: 1px solid #000; font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+            .gradesheet-student-info { font-size: 11px; font-weight: 700; margin: 6mm 0 3mm; }
+            .gradesheet-student-info span { display: inline-block; margin-right: 10mm; }
+            .gradesheet-table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+            .gradesheet-table th, .gradesheet-table td { border: 1px solid #000; padding: 1.2mm 1mm; text-align: center; vertical-align: middle; }
+            .gradesheet-table th { background: #f8fafc; font-weight: 700; }
+            .gradesheet-table .subject-name { text-align: left; padding-left: 2mm; }
+            .gradesheet-summary-row td { font-weight: 700; }
+            .gradesheet-flex { display: flex; gap: 4mm; margin-top: 4mm; align-items: flex-start; }
+            .gradesheet-left { flex: 1.1; }
+            .gradesheet-right { flex: 0.9; }
+            .gradesheet-card { border: 1px solid #000; box-sizing: border-box; }
+            .gradesheet-card-title { padding: 2mm 3mm; font-size: 9px; font-weight: 700; border-bottom: 1px solid #000; }
+            .gradesheet-card-body { padding: 2mm 3mm; font-size: 9px; }
+            .gradesheet-scale-table { font-size: 8px; }
+            .gradesheet-scale-table th, .gradesheet-scale-table td { padding: 1.2mm; }
+            .gradesheet-box-list { margin: 0; padding: 0; list-style: none; }
+            .gradesheet-box-list li { border: 1px solid #000; padding: 2.2mm 3mm; margin-bottom: 2mm; font-size: 9px; font-weight: 700; }
+            .gradesheet-extra { display: flex; margin-top: 3mm; }
+            .gradesheet-extra-left { flex: 0.6; border: 1px solid #000; padding: 3mm; font-size: 8.7px; font-weight: 700; }
+            .gradesheet-extra-right { flex: 0.4; border: 1px solid #000; border-left: none; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px; }
+            .gradesheet-teacher { margin-top: 3mm; border: 1px solid #000; padding: 3mm; min-height: 26mm; }
+            .gradesheet-teacher-title { font-size: 9px; font-weight: 700; margin-bottom: 2mm; }
+            .gradesheet-teacher-body { font-size: 9px; }
+            @media print { .sm-no-print { display: none !important; } .gradesheet-page { border: none; padding: 10mm 12mm 12mm; } }
+          `}</style>
+          <div className="gradesheet-page">
+            <div className="gradesheet-header">
+              <div className="gradesheet-school-name">{sheetData.school.name || "SCHOOL NAME"}</div>
+              <div className="gradesheet-school-meta">{sheetData.school.address || ""}</div>
+              <div className="gradesheet-school-meta">{sheetData.school.contact || ""}</div>
+              <div className="gradesheet-exam-title">{sheetData.school.exam_title || "ANNUAL EXAMINATION"}</div>
+              <div className="gradesheet-exam-year">{sheetData.school.exam_year || ""}</div>
+              <div className="gradesheet-label">GRADE SHEET</div>
             </div>
-            <div className="sm-print-seal">{(school.name || "S").trim()[0]?.toUpperCase()}</div>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
-            <div>
-              <div style={{ fontSize: 11, color: "var(--slate)", textTransform: "uppercase" }}>Student</div>
-              <div style={{ fontWeight: 700 }}>{student.name}</div>
-              <div style={{ fontSize: 13, color: "var(--slate)" }}>{student.className}{student.rollNo ? ` · Roll ${student.rollNo}` : ""}</div>
+            <div className="gradesheet-student-info">
+              <span>Name: {sheetData.student.name}</span>
+              <span>Class: {sheetData.student.class}</span>
+              <span>Section: {sheetData.student.section}</span>
+              <span>Roll No.: {sheetData.student.roll_no}</span>
             </div>
-          </div>
-          <table className="sm-table" style={{ marginBottom: 14 }}>
-            <thead><tr><th>Subject</th><th>Max</th><th>Obtained</th><th>%</th><th>Grade</th></tr></thead>
-            <tbody>
-              {report.rows.map((r) => (
-                <tr key={r.subject}>
-                  <td>{r.subject}</td>
-                  <td className="sm-mono">{r.maxMarks}</td>
-                  <td className="sm-mono">{r.obtained}</td>
-                  <td className="sm-mono">{r.pct.toFixed(1)}%</td>
-                  <td><span className={"sm-pill " + (r.pass ? "sm-pill-sage" : "sm-pill-rust")}>{r.grade}</span></td>
+            <table className="gradesheet-table">
+              <thead>
+                <tr>
+                  <th>S.N.</th>
+                  <th>Subject</th>
+                  <th>Credit Hour</th>
+                  <th>Th.</th>
+                  <th>Pr.</th>
+                  <th>Final Grade</th>
+                  <th>Grade Point</th>
+                  <th>Total Marks</th>
+                  <th>Highest Marks</th>
                 </tr>
-              ))}
-              <tr>
-                <td style={{ fontWeight: 700 }}>Total</td>
-                <td className="sm-mono" style={{ fontWeight: 700 }}>{report.totalMax}</td>
-                <td className="sm-mono" style={{ fontWeight: 700 }}>{report.totalObtained}</td>
-                <td className="sm-mono" style={{ fontWeight: 700 }}>{report.overallPct.toFixed(1)}%</td>
-                <td><span className={"sm-pill " + (report.allPass ? "sm-pill-sage" : "sm-pill-rust")}>{report.overall.grade}</span></td>
-              </tr>
-            </tbody>
-          </table>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span className={"sm-stamp" + (report.allPass ? "" : " sm-stamp-due")}>{report.allPass ? "PASS" : "NEEDS ATTENTION"}</span>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 12, color: "var(--slate)" }}>{report.overall.remark}</div>
-              <div className="sm-display" style={{ fontSize: 22 }}>{report.overall.grade}</div>
+              </thead>
+              <tbody>
+                {sheetData.subjects.map((subject, idx) => (
+                  <tr key={`${subject.name}-${idx}`}>
+                    <td>{idx + 1}</td>
+                    <td className="subject-name">{subject.name}</td>
+                    <td>{subject.credit_hour}</td>
+                    <td>{subject.th_grade}</td>
+                    <td>{subject.pr_grade}</td>
+                    <td>{subject.final_grade}</td>
+                    <td>{subject.grade_point}</td>
+                    <td>{subject.total_marks}</td>
+                    <td>{subject.highest_marks}</td>
+                  </tr>
+                ))}
+                <tr className="gradesheet-summary-row">
+                  <td colSpan="6">Grade Point Average (GPA):</td>
+                  <td>{sheetData.summary.gpa}</td>
+                  <td colSpan="2"></td>
+                </tr>
+                <tr className="gradesheet-summary-row">
+                  <td colSpan="6">Total Marks:</td>
+                  <td colSpan="1"></td>
+                  <td>{sheetData.summary.total_marks}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="gradesheet-flex">
+              <div className="gradesheet-left">
+                <div className="gradesheet-card">
+                  <div className="gradesheet-card-title">Grading / GPA System</div>
+                  <div className="gradesheet-card-body">
+                    <table className="gradesheet-scale-table">
+                      <thead>
+                        <tr><th>Interval</th><th>Grade Point</th><th>Grade</th><th>Remarks</th></tr>
+                      </thead>
+                      <tbody>
+                        {scaleRows.map((row) => (
+                          <tr key={`${row.grade}-${row.interval}`}>
+                            <td>{row.interval}</td>
+                            <td>{row.point}</td>
+                            <td>{row.grade}</td>
+                            <td>{row.remark}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div className="gradesheet-right">
+                <ul className="gradesheet-box-list">
+                  <li>Percentage: {sheetData.summary.percentage}%</li>
+                  <li>Attendance: {sheetData.summary.attendance}</li>
+                  <li>Rank: {sheetData.summary.rank} / Section Rank: {sheetData.summary.rank_section}</li>
+                </ul>
+                <div className="gradesheet-extra">
+                  <div className="gradesheet-extra-left">EXTRACURRICULAR ACTIVITIES</div>
+                  <div className="gradesheet-extra-right">{sheetData.summary.extracurricular_grade}</div>
+                </div>
+                <div className="gradesheet-teacher">
+                  <div className="gradesheet-teacher-title">Teacher Views:</div>
+                  <div className="gradesheet-teacher-body">{sheetData.summary.teacher_views}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -79,14 +250,12 @@ function GradesheetDoc({ exam, student, report, school, onClose }) {
 
 export default function GradesheetsTab({ exams, students, results, gradeScale, school, token }) {
   const [examId, setExamId] = useState(exams[0]?.id || "");
-  const [studentId, setStudentId] = useState("");
   const [doc, setDoc] = useState(null);
   const [err, setErr] = useState("");
   const exam = exams.find((e) => e.id === examId);
   const classStudents = exam ? students.filter((s) => String(s.className || "").trim().toLowerCase() === String(exam.className || "").trim().toLowerCase()) : [];
 
   useEffect(() => { setExamId(exams[0]?.id || ""); }, [exams.length]);
-  useEffect(() => { setStudentId(""); }, [examId]);
 
   async function view(sId) {
     setErr("");
@@ -94,7 +263,7 @@ export default function GradesheetsTab({ exams, students, results, gradeScale, s
       const student = classStudents.find((s) => s.id === sId);
       const data = await api(`/gradesheets/${examId}/${sId}`, { token });
       const report = data.report || computeReport(exam, student, null, gradeScale);
-      setDoc({ student, report });
+      setDoc({ student, report, sheet: data.sheet, gradeScale });
     } catch (e) {
       setErr(e.message || "Unable to load gradesheet.");
     }
@@ -134,7 +303,7 @@ export default function GradesheetsTab({ exams, students, results, gradeScale, s
           )}
         </div>
       )}
-      {doc && <GradesheetDoc exam={exam} student={doc.student} report={doc.report} school={school} onClose={() => setDoc(null)} />}
+      {doc && <GradesheetDoc exam={exam} student={doc.student} report={doc.report} school={school} sheet={doc.sheet} gradeScale={doc.gradeScale} onClose={() => setDoc(null)} />}
     </div>
   );
 }

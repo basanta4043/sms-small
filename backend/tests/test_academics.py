@@ -85,3 +85,5 @@ def test_exam_result_and_gradesheet_flow() -> None:
     gradesheet = gradesheet_resp.json()
     assert gradesheet["report"]["rows"][0]["obtained"] == 80
     assert gradesheet["report"]["overallPct"] >= 70
+    assert gradesheet["sheet"]["student"]["name"] == student_payload["name"]
+    assert gradesheet["sheet"]["summary"]["percentage"] >= 70

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gradesheet</title>
+  <style>
+    @page { size: A4; margin: 0; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f2f2f2;
+      color: #111;
+      line-height: 1.2;
+    }
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: white;
+      box-sizing: border-box;
+      padding: 12mm 15mm 14mm;
+      box-shadow: 0 0 8px rgba(0,0,0,0.15);
+    }
+    .header { text-align: center; margin-bottom: 6mm; }
+    .school-name { font-size: 20px; font-weight: 700; margin-bottom: 1mm; }
+    .school-meta { font-size: 10px; color: #333; margin-bottom: 1mm; }
+    .exam-title { font-size: 15px; font-weight: 700; margin-top: 3mm; }
+    .exam-year { font-size: 11px; font-weight: 700; margin-top: 1mm; }
+    .sheet-label {
+      display: inline-block;
+      margin-top: 4mm;
+      padding: 2mm 8mm;
+      border: 1px solid #000;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+    .student-info { font-size: 11px; font-weight: 700; margin: 6mm 0 3mm; }
+    .student-info span { display: inline-block; margin-right: 10mm; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5px;
+    }
+    th, td { border: 1px solid #000; padding: 1.2mm 1mm; text-align: center; vertical-align: middle; }
+    th { background: #f7f7f7; font-weight: 700; }
+    .subject-name { text-align: left; padding-left: 2mm; }
+    .summary-row td { font-weight: 700; }
+    .flex-row { display: flex; gap: 4mm; margin-top: 4mm; align-items: flex-start; }
+    .left-panel { flex: 1.1; }
+    .right-panel { flex: 0.9; }
+    .card { border: 1px solid #000; box-sizing: border-box; }
+    .card-title { padding: 2mm 3mm; font-size: 9px; font-weight: 700; border-bottom: 1px solid #000; }
+    .card-body { padding: 2mm 3mm; font-size: 9px; }
+    .scale-table { font-size: 8px; }
+    .scale-table th, .scale-table td { padding: 1.2mm; }
+    .box-list { margin: 0; padding: 0; list-style: none; }
+    .box-list li { border: 1px solid #000; padding: 2.2mm 3mm; margin-bottom: 2mm; font-size: 9px; font-weight: 700; }
+    .extra { display: flex; margin-top: 3mm; }
+    .extra .left { flex: 0.6; border: 1px solid #000; padding: 3mm; font-size: 8.7px; font-weight: 700; }
+    .extra .right { flex: 0.4; border: 1px solid #000; border-left: none; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px; }
+    .teacher { margin-top: 3mm; border: 1px solid #000; padding: 3mm; min-height: 26mm; }
+    .teacher-title { font-size: 9px; font-weight: 700; margin-bottom: 2mm; }
+    .teacher-body { font-size: 9px; }
+    .footer { margin-top: 10mm; text-align: center; font-size: 8.5px; }
+    .footer-line { border-top: 1px solid #000; width: 70%; margin: 8mm auto 2mm; }
+    .signatures { display: flex; justify-content: space-between; font-size: 9px; margin-top: 8mm; }
+    .sign { width: 23%; text-align: center; }
+    .sign .line { border-top: 1px solid #000; margin-top: 10mm; }
+    .print-actions { margin-bottom: 4mm; text-align: right; }
+    .print-actions button { padding: 2mm 4mm; font-size: 9px; cursor: pointer; }
+    @media print {
+      body { background: white; }
+      .page { box-shadow: none; width: 100%; min-height: auto; padding: 10mm 12mm 12mm; }
+      .print-actions { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="print-actions">
+      <button onclick="window.print()">Print</button>
+    </div>
+    <div class="header">
+      <div class="school-name">MALAGIREE ENGLISH BOARDING SCHOOL</div>
+      <div class="school-meta">Tahoon, Palpa</div>
+      <div class="school-meta">Contact No. </div>
+      <div class="exam-title">ANNUAL EXAMINATION</div>
+      <div class="exam-year">2082</div>
+      <div class="sheet-label">GRADE SHEET</div>
+    </div>
+
+    <div class="student-info">
+      <span>Name: Isha Shrestha</span>
+      <span>Class: 5</span>
+      <span>Section: A</span>
+      <span>Roll No.: 01</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>S.N.</th>
+          <th>Subject</th>
+          <th>Credit Hour</th>
+          <th>Th.</th>
+          <th>Pr.</th>
+          <th>Final Grade</th>
+          <th>Grade Point</th>
+          <th>Total Marks</th>
+          <th>Highest Marks</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+            <tr>
+                <td>1</td>
+                <td>ESSENTIAL ENGLISH READER</td>
+                <td>5</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>4</td>
+                <td>98</td>
+                <td>100</td>
+            </tr>
+            
+            <tr>
+                <td>2</td>
+                <td>C. NEPALI</td>
+                <td>5</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>4</td>
+                <td>96</td>
+                <td>97</td>
+            </tr>
+            
+            <tr>
+                <td>3</td>
+                <td>C. MATHEMATICS</td>
+                <td>5</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>4</td>
+                <td>98</td>
+                <td>99</td>
+            </tr>
+            
+            <tr>
+                <td>4</td>
+                <td>SCIENCE AND TECHNOLOGY</td>
+                <td>5</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>4</td>
+                <td>94</td>
+                <td>99</td>
+            </tr>
+            
+            <tr>
+                <td>5</td>
+                <td>SOCIAL STUDIES AND HUMAN VALUE EDUCATION</td>
+                <td>5</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>4</td>
+                <td>98</td>
+                <td>99</td>
+            </tr>
+            
+            <tr>
+                <td>6</td>
+                <td>COMPUTER SCIENCE</td>
+                <td>2.5</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>4</td>
+                <td>95</td>
+                <td>100</td>
+            </tr>
+            
+            <tr>
+                <td>7</td>
+                <td>GENERAL KNOWLEDGE</td>
+                <td>5</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>A+</td>
+                <td>4</td>
+                <td>49</td>
+                <td>50</td>
+            </tr>
+            
+        <tr class="summary-row">
+          <td colspan="6">Grade Point Average (GPA):</td>
+          <td>4</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr class="summary-row">
+          <td colspan="6">Total Marks:</td>
+          <td colspan="1"></td>
+          <td>628</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="flex-row">
+      <div class="left-panel">
+        <div class="card">
+          <div class="card-title">Grading / GPA System</div>
+          <div class="card-body">
+            <table class="scale-table">
+              <thead>
+                <tr><th>Interval</th><th>Grade Point</th><th>Grade</th><th>Remarks</th></tr>
+              </thead>
+              <tbody><tr><td>90% to 100%</td><td>4.0</td><td>A+</td><td>Outstanding</td></tr><tr><td>80% to Below 90%</td><td>3.6</td><td>A</td><td>Excellent</td></tr><tr><td>70% to Below 80%</td><td>3.2</td><td>B+</td><td>Very Good</td></tr><tr><td>60% to Below 70%</td><td>2.8</td><td>B</td><td>Good</td></tr><tr><td>50% to Below 60%</td><td>2.4</td><td>C+</td><td>Satisfactory</td></tr><tr><td>40% to Below 50%</td><td>2.0</td><td>C</td><td>Acceptable</td></tr><tr><td>35% to Below 40%</td><td>1.6</td><td>D</td><td>Basic</td></tr><tr><td>Below 35%</td><td>-</td><td>NG</td><td>Non Graded</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="right-panel">
+        <ul class="box-list">
+          <li>Percentage: 97.52%</li>
+          <li>Attendance: 230/237</li>
+          <li>Rank: 4 / Section Rank: 1</li>
+        </ul>
+        <div class="extra">
+          <div class="left">EXTRACURRICULAR ACTIVITIES</div>
+          <div class="right">A+</div>
+        </div>
+        <div class="teacher">
+          <div class="teacher-title">Teacher Views:</div>
+          <div class="teacher-body">Outstanding result! Keep it up.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>2082-12-30</div>
+      <div class="footer-line"></div>
+      <div class="signatures">
+        <div class="sign">Class Teacher<div class="line"></div></div>
+        <div class="sign">Result Issue Date<div class="line"></div></div>
+        <div class="sign">Exam Controller<div class="line"></div></div>
+        <div class="sign">Principal<div class="line"></div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
