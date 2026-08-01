@@ -182,11 +182,16 @@ export default function App() {
             const payments = (paymentsData.payments || []).map(camelizeKeys);
             const invoiceList = (invoicesData.invoices || []).map(camelizeKeys);
             const studentMap = Object.fromEntries(students.map((s) => [s.id, s]));
-            const invoices = invoiceList.map((invoice) => ({
-              ...invoice,
-              studentName: invoice.studentName || studentMap[invoice.studentId]?.name || "—",
-              studentClass: invoice.studentClass || studentMap[invoice.studentId]?.className || "—",
-            }));
+            const invoices = invoiceList.map((invoice) => {
+              const student = studentMap[invoice.studentId];
+              return {
+                ...invoice,
+                studentName: invoice.studentName || student?.name || "—",
+                studentClass: invoice.studentClass || student?.className || "—",
+                studentSection: student?.section || "—",
+                studentRollNo: student?.rollNo || "—",
+              };
+            });
             setStudentsState(students);
             setFeeDataState({
               feeStructures,
@@ -206,11 +211,16 @@ export default function App() {
             const payments = (paymentsData.payments || []).map(camelizeKeys);
             const invoiceList = (invoicesData.invoices || []).map(camelizeKeys);
             const studentMap = Object.fromEntries(students.map((s) => [s.id, s]));
-            const invoices = invoiceList.map((invoice) => ({
-              ...invoice,
-              studentName: invoice.studentName || studentMap[invoice.studentId]?.name || "—",
-              studentClass: invoice.studentClass || studentMap[invoice.studentId]?.className || "—",
-            }));
+            const invoices = invoiceList.map((invoice) => {
+              const student = studentMap[invoice.studentId];
+              return {
+                ...invoice,
+                studentName: invoice.studentName || student?.name || "—",
+                studentClass: invoice.studentClass || student?.className || "—",
+                studentSection: student?.section || "—",
+                studentRollNo: student?.rollNo || "—",
+              };
+            });
             setStudentsState(students);
             setFeeDataState((prev) => ({ ...prev, payments, invoices, nextInvoiceNo: prev.nextInvoiceNo || 1 }));
             break;

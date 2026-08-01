@@ -102,48 +102,93 @@ function CollectFeeForm({ students, feeData, currency, onSave, onClose }) {
 }
 
 export function InvoiceDoc({ invoice, school, currency, onClose }) {
+  const dateLabel = (() => {
+    const parsed = new Date(invoice.date);
+    if (!Number.isNaN(parsed.valueOf())) {
+      return parsed.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+    }
+    return invoice.date;
+  })();
+
+  const feeMonth = (() => {
+    const parsed = new Date(invoice.date);
+    if (!Number.isNaN(parsed.valueOf())) {
+      return parsed.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    }
+    return invoice.date;
+  })();
+
+  const phoneLine = [school.phone, school.email].filter(Boolean).join(" | ");
+
   return (
     <Modal title="" onClose={onClose} wide>
       <div className="sm-no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
         <button className="sm-btn sm-btn-gold" onClick={() => window.print()}><Printer size={15} /> Print</button>
       </div>
       <div className="sm-print-area">
-        <div className="sm-print-doc">
-          <div className="sm-print-head">
+        <div className="sm-print-doc" style={{ maxWidth: 700, padding: 28 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div>
-              <div className="sm-display" style={{ fontSize: 20 }}>{school.name || "Your School"}</div>
-              <div style={{ fontSize: 12, color: "var(--slate)" }}>{school.address}</div>
+              <div className="sm-display" style={{ fontSize: 24, letterSpacing: 0.25 }}>{school.name || "Your School"}</div>
+              <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 4 }}>{school.address}</div>
+              {phoneLine && <div style={{ fontSize: 12, color: "var(--slate)", marginTop: 2 }}>{phoneLine}</div>}
             </div>
-            <div className="sm-print-seal">{(school.name || "S").trim()[0]?.toUpperCase()}</div>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
-            <div>
-              <div style={{ fontSize: 11, color: "var(--slate)", textTransform: "uppercase" }}>Billed to</div>
-              <div style={{ fontWeight: 700 }}>{invoice.studentName}</div>
-              <div style={{ fontSize: 13, color: "var(--slate)" }}>{invoice.studentClass}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 11, color: "var(--slate)", textTransform: "uppercase" }}>Invoice</div>
-              <div className="sm-mono" style={{ fontWeight: 700 }}>{invoice.invoiceNo}</div>
-              <div style={{ fontSize: 13, color: "var(--slate)" }}>{invoice.date}</div>
+            <div style={{ textAlign: "right", fontSize: 11, color: "var(--slate)" }}>
+              <div><strong>S.No.</strong> {invoice.invoiceNo}</div>
+              <div style={{ marginTop: 8 }}><strong>Date</strong> {dateLabel}</div>
             </div>
           </div>
-          <table className="sm-table" style={{ marginBottom: 14 }}>
-            <thead><tr><th>Description</th><th>Method</th><th>Amount</th></tr></thead>
-            <tbody>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginBottom: 18, fontSize: 13 }}>
+            <div><strong>Name:</strong> {invoice.studentName}</div>
+            <div><strong>Class:</strong> {invoice.studentClass}</div>
+            <div><strong>Sec:</strong> {invoice.studentSection || "—"}</div>
+            <div><strong>Roll No.:</strong> {invoice.studentRollNo || "—"}</div>
+          </div>
+
+          <div style={{ marginBottom: 18, fontSize: 13 }}><strong>Fee for the month of:</strong> {feeMonth}</div>
+
+          <table className="sm-table" style={{ width: "100%", marginBottom: 16 }}>
+            <thead>
               <tr>
-                <td>Fee payment{invoice.note ? ` — ${invoice.note}` : ""}</td>
-                <td>{invoice.method}</td>
-                <td className="sm-mono">{currency}{invoice.amount}</td>
+                <th style={{ width: 50 }}>S.N.</th>
+                <th>Particulars</th>
+                <th style={{ width: 140, textAlign: "right" }}>Amount Rs.</th>
               </tr>
+            </thead>
+            <tbody>
+              {[
+                "Admission/Annual Fee",
+                "Monthly Fee",
+                "Computer",
+                "Examination",
+                "Transportation",
+                "Diary",
+                "I-Card",
+                "Grade Sheet",
+                "Misc.",
+                "",
+                "",
+                "",
+              ].map((label, index) => (
+                <tr key={index} style={{ borderTop: index === 0 ? "1px solid var(--line)" : undefined }}>
+                  <td className="sm-mono" style={{ padding: "8px 10px" }}>{index + 1}</td>
+                  <td style={{ padding: "8px 10px" }}>{label}</td>
+                  <td className="sm-mono" style={{ padding: "8px 10px", textAlign: "right" }}>&nbsp;</td>
+                </tr>
+              ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={2} style={{ textAlign: "right", padding: "10px 10px", fontWeight: 700 }}>Total</td>
+                <td className="sm-mono" style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700 }}>{currency}{invoice.amount}</td>
+              </tr>
+            </tfoot>
           </table>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span className="sm-stamp">PAID</span>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 12, color: "var(--slate)" }}>Total received</div>
-              <div className="sm-display" style={{ fontSize: 22 }}>{currency}{invoice.amount}</div>
-            </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, marginTop: 22 }}>
+            <div>Signature:-</div>
+            <div style={{ textAlign: "right" }}>Status: <strong>{invoice.status || "Paid"}</strong></div>
           </div>
         </div>
       </div>
