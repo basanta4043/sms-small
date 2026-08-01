@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
-import { Users, Search, Pencil, Trash2, Plus, X, Check } from "lucide-react";
+import React, { useMemo, useRef, useState } from "react";
+import { Search, Pencil, Trash2, Plus, Check, Upload } from "lucide-react";
 import { Modal, Field, Empty } from "../Shared";
-import { api } from "../../api/client";
+import { api, apiUpload } from "../../api/client";
 import { uid, todayStr, camelizeKeys } from "../../utils/helpers";
 
 function StudentForm({ initial, onSave, onClose }) {
@@ -54,6 +54,9 @@ export default function StudentsTab({ students, setStudents, token }) {
   const [showForm, setShowForm] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
   const [err, setErr] = useState("");
+  const [importNotice, setImportNotice] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef(null);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -105,14 +108,45 @@ export default function StudentsTab({ students, setStudents, token }) {
     }
   }
 
+  async function importStudents(file) {
+    if (!file) return;
+    setErr("");
+    setImportNotice("");
+    setIsImporting(true);
+    try {
+      const data = await apiUpload("/students/import", { file, token });
+      const importedStudents = (data.students || []).map(camelizeKeys);
+      setStudents((prev) => {
+        const existing = new Map(prev.map((s) => [String(s.id), s]));
+        importedStudents.forEach((student) => existing.set(String(student.id), student));
+        return Array.from(existing.values());
+      });
+      setImportNotice(`Imported ${importedStudents.length} student${importedStudents.length === 1 ? "" : "s"}.`);
+    } catch (e) {
+      setErr(e.message || "Unable to import students from CSV.");
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   return (
     <div>
       <div className="sm-panel">
         <div className="sm-panel-head">
           <div className="sm-search"><Search size={15} color="var(--slate)" /><input placeholder="Search name, roll no, class…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-          <button className="sm-btn sm-btn-gold" onClick={() => { setEditing(null); setShowForm(true); }}><Plus size={16} /> Add student</button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input ref={fileInputRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) importStudents(file);
+            }} />
+            <button type="button" className="sm-btn sm-btn-ghost" onClick={() => fileInputRef.current?.click()} disabled={isImporting}><Upload size={16} /> {isImporting ? "Importing..." : "Import CSV"}</button>
+            <button className="sm-btn sm-btn-gold" onClick={() => { setEditing(null); setShowForm(true); }}><Plus size={16} /> Add student</button>
+          </div>
         </div>
         {err && <div className="sm-error" style={{ margin: "0 18px 12px" }}>{err}</div>}
+        {importNotice && <div className="sm-note" style={{ margin: "0 18px 12px", color: "var(--slate)" }}>{importNotice}</div>}
+        <div className="sm-note" style={{ margin: "0 18px 12px", color: "var(--slate)" }}>CSV headers can be like name, rollNo, className, section, gender, dob, guardianName, phone, address, admissionDate, status.</div>
         {filtered.length === 0 ? (
           <Empty text={students.length === 0 ? "No students yet. Add your first student to get started." : "No students match your search."} />
         ) : (

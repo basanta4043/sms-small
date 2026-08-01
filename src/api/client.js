@@ -18,3 +18,24 @@ export async function api(path, { method = "GET", body, token } = {}) {
 
   return data;
 }
+
+export async function apiUpload(path, { file, token, method = "POST" } = {}) {
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}/api${path}`, {
+    method,
+    headers,
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || "Upload failed");
+  }
+
+  return data;
+}

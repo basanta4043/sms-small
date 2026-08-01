@@ -1,7 +1,9 @@
+import csv
+import io
 import os
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -119,6 +121,59 @@ class ResultPayload(BaseModel):
     exam_id: int
     student_id: int
     marks: list[dict[str, Any]]
+
+
+def _normalize_field_name(name: str | None) -> str:
+    if not name:
+        return ""
+    return "".join(ch for ch in str(name).strip().lower() if ch.isalnum())
+
+
+def _pick_row_value(row: dict[str, Any], *candidates: str) -> str | None:
+    for candidate in candidates:
+        value = row.get(candidate)
+        if value is None:
+            continue
+        value = str(value).strip()
+        if value:
+            return value
+    return None
+
+
+def _student_payload_from_row(row: dict[str, Any]) -> dict[str, Any] | None:
+    normalized_row = {
+        _normalize_field_name(key): (value.strip() if isinstance(value, str) else value)
+        for key, value in row.items()
+        if key is not None
+    }
+    name = _pick_row_value(normalized_row, "name", "studentname", "fullname", "full_name")
+    if not name:
+        return None
+
+    return {
+        "roll_no": _pick_row_value(normalized_row, "rollno", "roll_no", "rollnumber", "roll") or None,
+        "name": name,
+        "class_name": _pick_row_value(normalized_row, "classname", "class_name", "class", "grade") or None,
+        "section": _pick_row_value(normalized_row, "section") or None,
+        "gender": _pick_row_value(normalized_row, "gender") or None,
+        "dob": _pick_row_value(normalized_row, "dob", "dateofbirth") or None,
+        "guardian_name": _pick_row_value(normalized_row, "guardianname", "guardian_name", "guardian") or None,
+        "phone": _pick_row_value(normalized_row, "phone", "contactphone", "contact") or None,
+        "address": _pick_row_value(normalized_row, "address") or None,
+        "admission_date": _pick_row_value(normalized_row, "admissiondate", "admission_date", "admission") or None,
+        "status": _pick_row_value(normalized_row, "status") or "Active",
+    }
+
+
+def _parse_student_import_rows(file: UploadFile) -> list[dict[str, Any]]:
+    contents = file.file.read().decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(contents))
+    rows = []
+    for row in reader:
+        payload = _student_payload_from_row(row or {})
+        if payload:
+            rows.append(payload)
+    return rows
 
 
 def _grade_for_percentage(pct: float) -> dict[str, Any]:
@@ -451,6 +506,26 @@ def get_gradesheet(exam_id: int, student_id: int, user: Annotated[dict[str, obje
     report = _build_gradesheet_report(exam, result)
     sheet = _build_gradesheet_sheet(exam, student, report, school)
     return {"exam": exam, "result": result, "report": report, "sheet": sheet}
+
+
+@app.post("/students/import")
+def import_students(user: Annotated[dict[str, object], Depends(get_current_user)], file: UploadFile = File(...)) -> dict[str, object]:
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Please upload a CSV file")
+
+    try:
+        rows = _parse_student_import_rows(file)
+    except Exception as exc:  # pragma: no cover - defensive path
+        raise HTTPException(status_code=400, detail=f"Unable to read CSV file: {exc}") from exc
+
+    if not rows:
+        raise HTTPException(status_code=400, detail="No student rows found in the uploaded CSV")
+
+    created_students = []
+    for row in rows:
+        created_students.append(create_student_for_user(user["id"], row))
+
+    return {"imported": len(created_students), "students": created_students}
 
 
 @app.get("/students")
