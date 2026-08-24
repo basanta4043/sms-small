@@ -118,11 +118,11 @@ export default function App() {
       setRoute("login");
       return;
     }
-    if ((route === "landing" || route === "login") && tokenValue) {
+    if ((route === "landing" || route === "login") && tokenValue && auth) {
       navigateTo("/dashboard");
       setRoute("dashboard");
     }
-  }, [loaded, route]);
+  }, [auth, loaded, route]);
 
   useEffect(() => {
     (async () => {
@@ -262,7 +262,11 @@ export default function App() {
         }
       } catch (e) {
         window.localStorage.removeItem("sm_token");
+        setAuth(null);
+        setLoggedIn(false);
         setToken(null);
+        navigateTo("/login");
+        setRoute("login");
       }
     })();
   }, [loaded, token, tab]);
