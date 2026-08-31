@@ -4,7 +4,6 @@ import { Empty, Field, Modal } from "../Shared";
 import { api } from "../../api/client";
 import { camelizeKeys, fmtDate, todayStr, uid } from "../../utils/helpers";
 import NepaliDateInput from "../NepaliDateInput";
-              <Field label="Payment date (BS)"><NepaliDateInput value={date} onChange={(event) => setDate(event.target.value)} /></Field>
 
 function CreateInvoiceForm({ students, feeData, currency, onSave, onClose, saving }) {
   const [studentId, setStudentId] = useState(students[0]?.id || "");
