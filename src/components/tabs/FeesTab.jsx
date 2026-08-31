@@ -5,17 +5,22 @@ import { api } from "../../api/client";
 import { uid, camelizeKeys, fmtBsMonth, fmtDate, todayStr } from "../../utils/helpers";
 import NepaliDateInput from "../NepaliDateInput";
 
+const PARTICULAR_PRESETS = [
+  "Admission/Annual Fee", "Monthly Fee", "Computer", "Examination", "Transportation",
+  "Diary", "I-Card", "Grade Sheet", "Misc.",
+];
+
 function FeeStructureForm({ initial, onSave, onClose }) {
   const [className, setClassName] = useState(initial?.className || "");
-  const [items, setItems] = useState(initial?.items || [{ name: "Tuition", amount: "" }]);
+  const [items, setItems] = useState((initial?.items || [{ name: "Monthly Fee", amount: "", months: 1 }]).map((item) => ({ ...item, months: item.months || 1 })));
   function updateItem(i, k, v) { setItems((p) => p.map((it, idx) => (idx === i ? { ...it, [k]: v } : it))); }
-  function addItem() { setItems((p) => [...p, { name: "", amount: "" }]); }
+  function addItem() { setItems((p) => [...p, { name: "", amount: "", months: 1 }]); }
   function removeItem(i) { setItems((p) => p.filter((_, idx) => idx !== i)); }
   function submit(e) {
     e.preventDefault();
     if (!className.trim()) return;
-    const cleanItems = items.filter((it) => it.name.trim()).map((it) => ({ name: it.name.trim(), amount: Number(it.amount) || 0 }));
-    const total = cleanItems.reduce((s, it) => s + it.amount, 0);
+    const cleanItems = items.filter((it) => it.name.trim()).map((it) => ({ name: it.name.trim(), amount: Number(it.amount) || 0, months: Math.max(1, parseInt(it.months, 10) || 1) }));
+    const total = cleanItems.reduce((s, it) => s + (it.amount * it.months), 0);
     const saveData = { className: className.trim(), items: cleanItems, total };
     if (initial?.id) {
       // Only include ID if we're editing an existing item
@@ -28,15 +33,25 @@ function FeeStructureForm({ initial, onSave, onClose }) {
       <form onSubmit={submit}>
         <Field label="Class / Grade"><input className="sm-input" value={className} onChange={(e) => setClassName(e.target.value)} placeholder="e.g. Grade 5" /></Field>
         <div className="sm-divider" />
-        <label className="sm-label">Fee items</label>
+        <label className="sm-label">Particulars</label>
+        <div className="sm-note" style={{ marginBottom: 10 }}>Choose a receipt particular, enter its amount, and set how many months it covers.</div>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1fr) 120px 100px 36px", gap: 8, marginBottom: 6, color: "var(--slate)", fontSize: 11, textTransform: "uppercase" }}>
+          <span>Particular</span><span>Amount</span><span>Months</span><span />
+        </div>
         {items.map((it, i) => (
-          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input className="sm-input" placeholder="Item name (e.g. Tuition)" value={it.name} onChange={(e) => updateItem(i, "name", e.target.value)} />
-            <input className="sm-input" style={{ maxWidth: 130 }} type="number" placeholder="Amount" value={it.amount} onChange={(e) => updateItem(i, "amount", e.target.value)} />
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1fr) 120px 100px 36px", gap: 8, marginBottom: 8 }}>
+            <select className="sm-select" value={PARTICULAR_PRESETS.includes(it.name) ? it.name : (it.name ? "__custom__" : "")} onChange={(e) => updateItem(i, "name", e.target.value === "__custom__" ? "" : e.target.value)}>
+              <option value="">Select particular</option>
+              {PARTICULAR_PRESETS.map((preset) => <option key={preset} value={preset}>{preset}</option>)}
+              <option value="__custom__">Custom particular...</option>
+            </select>
+            <input className="sm-input" placeholder="Amount" type="number" min="0" value={it.amount} onChange={(e) => updateItem(i, "amount", e.target.value)} />
+            <input className="sm-input" placeholder="Months" type="number" min="1" step="1" value={it.months} onChange={(e) => updateItem(i, "months", e.target.value)} />
             <button type="button" className="sm-icon-btn" onClick={() => removeItem(i)}><X size={16} /></button>
+            {(it.name === "" || !PARTICULAR_PRESETS.includes(it.name)) && <input className="sm-input" style={{ gridColumn: "1 / span 3" }} placeholder="Custom particular name" value={it.name} onChange={(e) => updateItem(i, "name", e.target.value)} />}
           </div>
         ))}
-        <button type="button" className="sm-btn sm-btn-ghost" onClick={addItem}><Plus size={14} /> Add item</button>
+        <button type="button" className="sm-btn sm-btn-ghost" onClick={addItem}><Plus size={14} /> Add particular</button>
         <div className="sm-modal-actions">
           <button type="button" className="sm-btn sm-btn-ghost" onClick={onClose}>Cancel</button>
           <button className="sm-btn sm-btn-primary"><Check size={16} /> Save structure</button>

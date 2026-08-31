@@ -14,17 +14,15 @@ function CreateInvoiceForm({ students, feeData, currency, onSave, onClose, savin
   const [note, setNote] = useState("");
   const student = students.find((item) => String(item.id) === String(studentId));
   const structure = feeData.feeStructures.find((item) => item.className.trim().toLowerCase() === (student?.className || "").trim().toLowerCase());
-  const monthlyItem = structure?.items.find((item) => /monthly/i.test(item.name));
-  const monthlyFee = Number(monthlyItem?.amount) || Number(structure?.total) || 0;
-  const otherItems = monthlyItem ? structure.items.filter((item) => item !== monthlyItem) : [];
   const monthCount = Math.max(1, parseInt(months, 10) || 1);
-  const subtotal = monthlyFee * monthCount + otherItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const configuredItems = structure?.items || [];
+  const subtotal = configuredItems.reduce((sum, item) => sum + (Number(item.amount) || 0) * monthCount, 0);
   const discountAmount = Math.min(Math.max(0, Number(discount) || 0), subtotal);
   const total = subtotal - discountAmount;
-  const items = [
-    { name: monthlyItem ? `${monthlyItem.name} (${monthCount} month${monthCount === 1 ? "" : "s"})` : "Monthly Fee", amount: monthlyFee * monthCount },
-    ...otherItems.map((item) => ({ name: item.name, amount: Number(item.amount) || 0 })),
-  ].filter((item) => item.amount > 0);
+  const items = configuredItems.map((item) => ({
+    name: `${item.name} (${monthCount} month${monthCount === 1 ? "" : "s"})`,
+    amount: (Number(item.amount) || 0) * monthCount,
+  })).filter((item) => item.amount > 0);
 
   function submit(event) {
     event.preventDefault();
@@ -51,7 +49,7 @@ function CreateInvoiceForm({ students, feeData, currency, onSave, onClose, savin
               <Field label="Method"><select className="sm-select" value={method} onChange={(event) => setMethod(event.target.value)}><option>Cash</option><option>Bank transfer</option><option>Mobile wallet</option><option>Cheque</option></select></Field>
               <Field label="Note (optional)" span2><input className="sm-input" value={note} onChange={(event) => setNote(event.target.value)} /></Field>
             </div>
-            <div className="sm-note" style={{ marginTop: 4 }}>Monthly fee: {currency}{monthlyFee} · Subtotal: {currency}{subtotal} · Total: <strong>{currency}{total}</strong></div>
+            <div className="sm-note" style={{ marginTop: 4 }}>All particulars × {monthCount} month{monthCount === 1 ? "" : "s"} · Subtotal: {currency}{subtotal} · Total: <strong>{currency}{total}</strong></div>
           </>
         )}
         <div className="sm-modal-actions">
