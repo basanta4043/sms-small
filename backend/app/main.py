@@ -84,6 +84,9 @@ class PaymentPayload(BaseModel):
     method: str
     note: str | None = None
     date: str
+    fee_months: int = 1
+    discount: float = 0
+    items: list[dict[str, Any]] = []
 
 
 class StudentPayload(BaseModel):

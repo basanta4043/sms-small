@@ -202,12 +202,14 @@ export default function App() {
             break;
           }
           case "invoices": {
-            const [studentsData, paymentsData, invoicesData] = await Promise.all([
+            const [studentsData, structuresData, paymentsData, invoicesData] = await Promise.all([
               api("/students", { token }),
+              api("/fees/structures", { token }),
               api("/fees/payments", { token }),
               api("/fees/invoices", { token }),
             ]);
             const students = (studentsData.students || []).map(camelizeKeys);
+            const feeStructures = (structuresData.feeStructures || []).map(camelizeKeys);
             const payments = (paymentsData.payments || []).map(camelizeKeys);
             const invoiceList = (invoicesData.invoices || []).map(camelizeKeys);
             const studentMap = Object.fromEntries(students.map((s) => [s.id, s]));
@@ -222,7 +224,7 @@ export default function App() {
               };
             });
             setStudentsState(students);
-            setFeeDataState((prev) => ({ ...prev, payments, invoices, nextInvoiceNo: prev.nextInvoiceNo || 1 }));
+            setFeeDataState((prev) => ({ ...prev, feeStructures, payments, invoices, nextInvoiceNo: prev.nextInvoiceNo || 1 }));
             break;
           }
           case "exams": {
@@ -415,7 +417,7 @@ export default function App() {
               )}
               {tab === "students" && <StudentsTab students={students} setStudents={setStudentsState} token={token} />}
               {tab === "fees" && <FeesTab students={students} feeData={feeData} setFeeData={setFeeDataState} currency={school.currency} token={token} onOpenInvoice={setInvoiceView} />}
-              {tab === "invoices" && <InvoicesTab feeData={feeData} school={school} currency={school.currency} onOpen={setInvoiceView} />}
+              {tab === "invoices" && <InvoicesTab feeData={feeData} students={students} currency={school.currency} token={token} setFeeData={setFeeDataState} onOpen={setInvoiceView} />}
               {tab === "exams" && <ExamsTab exams={academics.exams} setExams={setExams} token={token} />}
               {tab === "results" && <ResultsTab exams={academics.exams} students={students} results={academics.results} setResults={setResults} token={token} />}
               {tab === "gradesheets" && <GradesheetsTab exams={academics.exams} students={students} results={academics.results} gradeScale={academics.gradeScale} school={school} token={token} />}

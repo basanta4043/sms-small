@@ -121,6 +121,9 @@ def init_schema() -> None:
                 )
                 """
             )
+            cur.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS fee_months INTEGER NOT NULL DEFAULT 1")
+            cur.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount NUMERIC NOT NULL DEFAULT 0")
+            cur.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS items JSONB NOT NULL DEFAULT '[]'::jsonb")
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS payments (
@@ -667,7 +670,8 @@ def get_invoices_for_user(user_id: int | str) -> list[dict[str, Any]]:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, user_id, student_id, invoice_no, date, amount, method, note, status, created_at
+                  SELECT id, user_id, student_id, invoice_no, date, amount, method, note, status,
+                      fee_months, discount, items, created_at
                 FROM invoices WHERE user_id = %s ORDER BY date DESC, id DESC
                 """,
                 (int(user_id),),
@@ -684,9 +688,9 @@ def create_payment_and_invoice(user_id: int | str, payment: dict[str, Any]) -> d
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 """
-                INSERT INTO invoices (user_id, student_id, invoice_no, date, amount, method, note, status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, invoice_no, date, amount, method, note, status, created_at
+                INSERT INTO invoices (user_id, student_id, invoice_no, date, amount, method, note, status, fee_months, discount, items)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, invoice_no, date, amount, method, note, status, fee_months, discount, items, created_at
                 """,
                 (
                     int(user_id),
@@ -697,6 +701,9 @@ def create_payment_and_invoice(user_id: int | str, payment: dict[str, Any]) -> d
                     payment["method"],
                     payment.get("note"),
                     "Paid",
+                    payment.get("fee_months", 1),
+                    payment.get("discount", 0),
+                    psycopg2.extras.Json(payment.get("items", [])),
                 ),
             )
             invoice = cur.fetchone()
@@ -705,7 +712,8 @@ def create_payment_and_invoice(user_id: int | str, payment: dict[str, Any]) -> d
             cur.execute("UPDATE invoices SET invoice_no = %s WHERE id = %s", (invoice_no, invoice_id))
             cur.execute(
                 """
-                SELECT id, user_id, student_id, invoice_no, date, amount, method, note, status, created_at
+                  SELECT id, user_id, student_id, invoice_no, date, amount, method, note, status,
+                      fee_months, discount, items, created_at
                 FROM invoices WHERE id = %s
                 """,
                 (invoice_id,),

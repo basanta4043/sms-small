@@ -117,6 +117,8 @@ export function InvoiceDoc({ invoice, school, currency, onClose }) {
     }
     return invoice.date;
   })();
+  const feePeriod = invoice.feeMonths > 1 ? `${feeMonth} (${invoice.feeMonths} months)` : feeMonth;
+  const lineItems = invoice.items?.length ? invoice.items : [{ name: invoice.note ? `Fee payment — ${invoice.note}` : "Fee payment", amount: invoice.amount }];
 
   const phoneLine = [school.phone, school.email].filter(Boolean).join(" | ");
 
@@ -146,7 +148,7 @@ export function InvoiceDoc({ invoice, school, currency, onClose }) {
             <div><strong>Roll No.:</strong> {invoice.studentRollNo || "—"}</div>
           </div>
 
-          <div style={{ marginBottom: 18, fontSize: 13 }}><strong>Fee for the month of:</strong> {feeMonth}</div>
+          <div style={{ marginBottom: 18, fontSize: 13 }}><strong>Fee for the month of:</strong> {feePeriod}</div>
 
           <table className="sm-table" style={{ width: "100%", marginBottom: 16 }}>
             <thead>
@@ -157,28 +159,16 @@ export function InvoiceDoc({ invoice, school, currency, onClose }) {
               </tr>
             </thead>
             <tbody>
-              {[
-                "Admission/Annual Fee",
-                "Monthly Fee",
-                "Computer",
-                "Examination",
-                "Transportation",
-                "Diary",
-                "I-Card",
-                "Grade Sheet",
-                "Misc.",
-                "",
-                "",
-                "",
-              ].map((label, index) => (
+              {Array.from({ length: Math.max(12, lineItems.length) }, (_, index) => lineItems[index] || { name: "", amount: "" }).map((item, index) => (
                 <tr key={index} style={{ borderTop: index === 0 ? "1px solid var(--line)" : undefined }}>
                   <td className="sm-mono" style={{ padding: "8px 10px" }}>{index + 1}</td>
-                  <td style={{ padding: "8px 10px" }}>{label}</td>
-                  <td className="sm-mono" style={{ padding: "8px 10px", textAlign: "right" }}>&nbsp;</td>
+                  <td style={{ padding: "8px 10px" }}>{item.name}</td>
+                  <td className="sm-mono" style={{ padding: "8px 10px", textAlign: "right" }}>{item.amount ? `${currency}${item.amount}` : "\u00a0"}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
+              {invoice.discount > 0 && <tr><td colSpan={2} style={{ textAlign: "right", padding: "8px 10px" }}>Discount</td><td className="sm-mono" style={{ padding: "8px 10px", textAlign: "right" }}>-{currency}{invoice.discount}</td></tr>}
               <tr>
                 <td colSpan={2} style={{ textAlign: "right", padding: "10px 10px", fontWeight: 700 }}>Total</td>
                 <td className="sm-mono" style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700 }}>{currency}{invoice.amount}</td>
