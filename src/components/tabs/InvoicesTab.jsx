@@ -3,6 +3,8 @@ import { Check, Plus, Printer, Search } from "lucide-react";
 import { Empty, Field, Modal } from "../Shared";
 import { api } from "../../api/client";
 import { camelizeKeys, fmtDate, todayStr, uid } from "../../utils/helpers";
+import NepaliDateInput from "../NepaliDateInput";
+              <Field label="Payment date (BS)"><NepaliDateInput value={date} onChange={(event) => setDate(event.target.value)} /></Field>
 
 function CreateInvoiceForm({ students, feeData, currency, onSave, onClose, saving }) {
   const [studentId, setStudentId] = useState(students[0]?.id || "");
@@ -46,7 +48,7 @@ function CreateInvoiceForm({ students, feeData, currency, onSave, onClose, savin
             <div className="sm-form-grid">
               <Field label="Months to pay"><input className="sm-input" type="number" min="1" step="1" value={months} onChange={(event) => setMonths(event.target.value)} /></Field>
               <Field label={`Flat discount (${currency})`}><input className="sm-input" type="number" min="0" step="0.01" value={discount} onChange={(event) => setDiscount(event.target.value)} /></Field>
-              <Field label="Payment date"><input className="sm-input" type="date" value={date} onChange={(event) => setDate(event.target.value)} /></Field>
+              <Field label="Payment date (BS)"><NepaliDateInput value={date} onChange={(event) => setDate(event.target.value)} /></Field>
               <Field label="Method"><select className="sm-select" value={method} onChange={(event) => setMethod(event.target.value)}><option>Cash</option><option>Bank transfer</option><option>Mobile wallet</option><option>Cheque</option></select></Field>
               <Field label="Note (optional)" span2><input className="sm-input" value={note} onChange={(event) => setNote(event.target.value)} /></Field>
             </div>

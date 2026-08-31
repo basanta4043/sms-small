@@ -1,3 +1,5 @@
+import NepaliDate from "nepali-date-converter";
+
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
 export async function sha256(text) {
@@ -8,13 +10,43 @@ export async function sha256(text) {
 
 export function fmtDate(d) {
   if (!d) return "—";
-  const dt = new Date(d);
-  if (isNaN(dt)) return d;
-  return dt.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  try {
+    return new NepaliDate(new Date(`${d}T00:00:00`)).format("YYYY-MM-DD");
+  } catch (error) {
+    return d;
+  }
 }
 
 export function todayStr() {
   return new Date().toISOString().slice(0, 10);
+}
+
+export function isoToBs(isoDate) {
+  if (!isoDate) return "";
+  try {
+    return new NepaliDate(new Date(`${isoDate}T00:00:00`)).format("YYYY-MM-DD");
+  } catch (error) {
+    return "";
+  }
+}
+
+export function fmtBsMonth(isoDate) {
+  if (!isoDate) return "—";
+  try {
+    return new NepaliDate(new Date(`${isoDate}T00:00:00`)).format("MMMM YYYY");
+  } catch (error) {
+    return isoDate;
+  }
+}
+
+export function bsToIso(bsDate) {
+  if (!/^\d{4}-\d{1,2}-\d{1,2}$/.test(bsDate)) return "";
+  try {
+    const ad = new NepaliDate(bsDate).getAD();
+    return [ad.year, ad.month + 1, ad.date].map((part) => String(part).padStart(2, "0")).join("-");
+  } catch (error) {
+    return "";
+  }
 }
 
 export function snakeToCamel(value) {

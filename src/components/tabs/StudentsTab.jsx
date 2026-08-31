@@ -3,6 +3,7 @@ import { Search, Pencil, Trash2, Plus, Check, Upload } from "lucide-react";
 import { Modal, Field, Empty } from "../Shared";
 import { api, apiUpload } from "../../api/client";
 import { uid, todayStr, camelizeKeys } from "../../utils/helpers";
+import NepaliDateInput from "../NepaliDateInput";
 
 function StudentForm({ initial, onSave, onClose }) {
   const [f, setF] = useState(initial || {
@@ -28,10 +29,10 @@ function StudentForm({ initial, onSave, onClose }) {
               <option>Female</option><option>Male</option><option>Other</option>
             </select>
           </Field>
-          <Field label="Date of birth"><input type="date" className="sm-input" value={f.dob} onChange={(e) => set("dob", e.target.value)} /></Field>
           <Field label="Guardian name"><input className="sm-input" value={f.guardianName} onChange={(e) => set("guardianName", e.target.value)} /></Field>
           <Field label="Contact phone"><input className="sm-input" value={f.phone} onChange={(e) => set("phone", e.target.value)} /></Field>
-          <Field label="Admission date"><input type="date" className="sm-input" value={f.admissionDate} onChange={(e) => set("admissionDate", e.target.value)} /></Field>
+          <Field label="Date of birth (BS)"><NepaliDateInput value={f.dob} onChange={(e) => set("dob", e.target.value)} /></Field>
+          <Field label="Admission date (BS)"><NepaliDateInput value={f.admissionDate} onChange={(e) => set("admissionDate", e.target.value)} /></Field>
           <Field label="Status">
             <select className="sm-select" value={f.status} onChange={(e) => set("status", e.target.value)}>
               <option>Active</option><option>Inactive</option>

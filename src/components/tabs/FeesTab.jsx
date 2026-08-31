@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Plus, X, Check, Pencil, Trash2, Printer } from "lucide-react";
 import { Modal, Field, Empty } from "../Shared";
 import { api } from "../../api/client";
-import { uid, camelizeKeys, todayStr } from "../../utils/helpers";
+import { uid, camelizeKeys, fmtBsMonth, fmtDate, todayStr } from "../../utils/helpers";
+import NepaliDateInput from "../NepaliDateInput";
 
 function FeeStructureForm({ initial, onSave, onClose }) {
   const [className, setClassName] = useState(initial?.className || "");
@@ -84,7 +85,7 @@ function CollectFeeForm({ students, feeData, currency, onSave, onClose }) {
         )}
         <div className="sm-form-grid">
           <Field label={`Amount (${currency})`}><input className="sm-input" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus /></Field>
-          <Field label="Payment date"><input className="sm-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+          <Field label="Payment date (BS)"><NepaliDateInput value={date} onChange={(e) => setDate(e.target.value)} /></Field>
           <Field label="Method">
             <select className="sm-select" value={method} onChange={(e) => setMethod(e.target.value)}>
               <option>Cash</option><option>Bank transfer</option><option>Mobile wallet</option><option>Cheque</option>
@@ -103,19 +104,11 @@ function CollectFeeForm({ students, feeData, currency, onSave, onClose }) {
 
 export function InvoiceDoc({ invoice, school, currency, onClose }) {
   const dateLabel = (() => {
-    const parsed = new Date(invoice.date);
-    if (!Number.isNaN(parsed.valueOf())) {
-      return parsed.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
-    }
-    return invoice.date;
+    return fmtDate(invoice.date);
   })();
 
   const feeMonth = (() => {
-    const parsed = new Date(invoice.date);
-    if (!Number.isNaN(parsed.valueOf())) {
-      return parsed.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-    }
-    return invoice.date;
+    return fmtBsMonth(invoice.date);
   })();
   const feePeriod = invoice.feeMonths > 1 ? `${feeMonth} (${invoice.feeMonths} months)` : feeMonth;
   const lineItems = invoice.items?.length ? invoice.items : [{ name: invoice.note ? `Fee payment — ${invoice.note}` : "Fee payment", amount: invoice.amount }];
@@ -351,7 +344,7 @@ export default function FeesTab({ students, feeData, setFeeData, currency, token
                   const invoice = feeData.invoices.find((i) => i.id === p.invoiceId);
                   return (
                     <tr key={p.id}>
-                      <td>{p.date}</td>
+                      <td>{fmtDate(p.date)}</td>
                       <td>{student?.name || "—"}</td>
                       <td className="sm-mono">{currency}{p.amount}</td>
                       <td>{p.method}</td>
