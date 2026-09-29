@@ -68,6 +68,8 @@ def test_exam_result_and_gradesheet_flow() -> None:
     result_payload = {
         "exam_id": exam["id"],
         "student_id": student["id"],
+        "attendance": "85/90",
+        "extracurricular_activities": "Football team — A",
         "marks": [
             {"subject": "Math", "obtained": 80, "max_marks": 100},
             {"subject": "Science", "obtained": 72, "max_marks": 100},
@@ -79,6 +81,8 @@ def test_exam_result_and_gradesheet_flow() -> None:
     result = create_result_resp.json()["result"]
     assert result["exam_id"] == exam["id"]
     assert result["student_id"] == student["id"]
+    assert result["attendance"] == "85/90"
+    assert result["extracurricular_activities"] == "Football team — A"
 
     gradesheet_resp = client.get(f"/gradesheets/{exam['id']}/{student['id']}", headers=headers)
     assert gradesheet_resp.status_code == 200, gradesheet_resp.text
@@ -87,3 +91,10 @@ def test_exam_result_and_gradesheet_flow() -> None:
     assert gradesheet["report"]["overallPct"] >= 70
     assert gradesheet["sheet"]["student"]["name"] == student_payload["name"]
     assert gradesheet["sheet"]["summary"]["percentage"] >= 70
+    assert gradesheet["sheet"]["summary"]["attendance"] == "85/90"
+    assert gradesheet["sheet"]["summary"]["extracurricular_grade"] == "Football team — A"
+
+    updated_exam_payload = {**exam_payload, "name": "Updated Mid Term"}
+    update_exam_resp = client.put(f"/exams/{exam['id']}", json=updated_exam_payload, headers=headers)
+    assert update_exam_resp.status_code == 200, update_exam_resp.text
+    assert update_exam_resp.json()["exam"]["name"] == "Updated Mid Term"

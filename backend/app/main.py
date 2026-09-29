@@ -5,12 +5,13 @@ from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.auth import create_access_token, decode_access_token, hash_password, verify_password
 from app.database import (
     create_exam_for_user,
+    create_blank_invoice_for_user,
     create_fee_structure_for_user,
     create_or_update_result_for_user,
     create_payment_and_invoice,
@@ -89,6 +90,25 @@ class PaymentPayload(BaseModel):
     items: list[dict[str, Any]] = []
 
 
+class InvoiceItemPayload(BaseModel):
+    name: str
+    amount: float = Field(ge=0)
+
+
+class BlankInvoicePayload(BaseModel):
+    student_id: int
+    date: str
+    fee_periods: list[str]
+    items: list[InvoiceItemPayload] = Field(default_factory=list)
+    note: str | None = None
+
+
+NEPALI_MONTHS = (
+    "Baishak", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
+    "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra",
+)
+
+
 class StudentPayload(BaseModel):
     roll_no: str | None = None
     name: str
@@ -124,6 +144,8 @@ class ResultPayload(BaseModel):
     exam_id: int
     student_id: int
     marks: list[dict[str, Any]]
+    attendance: str | None = None
+    extracurricular_activities: str | None = None
 
 
 def _normalize_field_name(name: str | None) -> str:
@@ -245,7 +267,7 @@ def _build_gradesheet_report(exam: dict[str, Any], result: dict[str, Any]) -> di
     }
 
 
-def _build_gradesheet_sheet(exam: dict[str, Any], student: dict[str, Any] | None, report: dict[str, Any], school: dict[str, Any] | None) -> dict[str, Any]:
+def _build_gradesheet_sheet(exam: dict[str, Any], student: dict[str, Any] | None, result: dict[str, Any], report: dict[str, Any], school: dict[str, Any] | None) -> dict[str, Any]:
     subjects = []
     for row in report.get("rows", []):
         subjects.append(
@@ -267,10 +289,10 @@ def _build_gradesheet_sheet(exam: dict[str, Any], student: dict[str, Any] | None
         "total_marks": report.get("totalObtained", 0),
         "highest_total": report.get("totalMax", 0),
         "percentage": report.get("overallPct", 0),
-        "attendance": "",
+        "attendance": result.get("attendance") or "",
         "rank": "",
         "rank_section": "",
-        "extracurricular_grade": overall.get("grade", ""),
+        "extracurricular_grade": result.get("extracurricular_activities") or "",
         "teacher_views": f"{overall.get('remark', '')} — {'PASS' if report.get('allPass') else 'NEEDS ATTENTION'}",
     }
 
@@ -450,6 +472,21 @@ def list_invoices(user: Annotated[dict[str, object], Depends(get_current_user)])
     return {"invoices": get_invoices_for_user(user["id"])}
 
 
+@app.post("/fees/invoices")
+def create_blank_invoice(payload: BlankInvoicePayload, user: Annotated[dict[str, object], Depends(get_current_user)]) -> dict[str, object]:
+    if not payload.fee_periods or any(month not in NEPALI_MONTHS for month in payload.fee_periods):
+        raise HTTPException(status_code=400, detail="Select one or more valid Nepali months")
+    fee_periods = sorted(set(payload.fee_periods), key=NEPALI_MONTHS.index)
+    invoice_items = [item.model_dump() for item in payload.items if item.name.strip()]
+    total = round(sum(item["amount"] for item in invoice_items), 2)
+    invoice = create_blank_invoice_for_user(user["id"], {
+        **payload.model_dump(), "fee_periods": fee_periods, "items": invoice_items, "amount": total,
+    })
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return {"invoice": invoice}
+
+
 @app.post("/fees/payments")
 def collect_fee(payload: PaymentPayload, user: Annotated[dict[str, object], Depends(get_current_user)]) -> dict[str, object]:
     result = create_payment_and_invoice(user["id"], payload.model_dump())
@@ -507,7 +544,7 @@ def get_gradesheet(exam_id: int, student_id: int, user: Annotated[dict[str, obje
     students = get_students_for_user(user["id"])
     student = next((item for item in students if str(item.get("id")) == str(student_id)), None)
     report = _build_gradesheet_report(exam, result)
-    sheet = _build_gradesheet_sheet(exam, student, report, school)
+    sheet = _build_gradesheet_sheet(exam, student, result, report, school)
     return {"exam": exam, "result": result, "report": report, "sheet": sheet}
 
 

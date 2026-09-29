@@ -1,62 +1,3 @@
-"""
-Gradesheet PDF Generator
-=========================
-Generates a school "Grade Sheet" (annual examination mark sheet) as a PDF,
-matching a standard Nepali school gradesheet layout, from a single JSON object.
-
-Usage:
-    python gradesheet.py data.json output.pdf
-
-Or import and call `generate_gradesheet(data, "output.pdf")` directly.
-
-JSON schema (all keys optional unless noted, sensible defaults are used):
-{
-    "school": {
-        "name": "NEPAL ADARSHA SECONDARY SCHOOL",
-        "address": "Waling, Syangja",
-        "contact": "Contact No. 063-441219, 9856050142, 9856050143",
-        "logo_path": "logo.png",          # optional, local image path
-        "badge_path": "badge.png",        # optional, top-right badge/award image
-        "exam_title": "ANNUAL EXAMINATION",
-        "exam_year": "2082"
-    },
-    "student": {
-        "name": "BISHWAS PANGENI",
-        "class": "5",
-        "section": "SARASWATI",
-        "roll_no": "21"
-    },
-    "subjects": [
-        {
-            "name": "ESSENTIAL ENGLISH READER",
-            "credit_hour": 5,
-            "th_grade": "A+",
-            "pr_grade": "A+",
-            "final_grade": "A+",
-            "grade_point": 4.0,
-            "total_marks": 98,
-            "highest_marks": 100
-        },
-        ...
-    ],
-    "summary": {
-        "gpa": 4.00,                # optional -- auto-computed from subjects if omitted
-        "total_marks": 628,         # optional -- auto-summed from subjects if omitted
-        "percentage": 96.62,        # optional -- auto-computed if omitted
-        "attendance": "230/237",
-        "rank": 4,
-        "rank_section": 1,
-        "extracurricular_grade": "A+",
-        "teacher_views": "Outstanding result! Keep it up."
-    },
-    "footer": {
-        "result_issue_date": "2082-12-30",
-        "class_teacher": "",
-        "exam_controller": "",
-        "principal": ""
-    }
-}
-"""
 
 import json
 import sys
@@ -203,7 +144,7 @@ class GradesheetPDF:
                    align="center")
         y -= 6 * mm
         if school.get("address"):
-            self.text(cx, y, school["address"], "Helvetica", 10, align="center")
+            self.text(cx, y, school["address"], "Helvetica", 12, align="center")
             y -= 5 * mm
         if school.get("contact"):
             self.text(cx, y, school["contact"], "Helvetica", 9.5, align="center")

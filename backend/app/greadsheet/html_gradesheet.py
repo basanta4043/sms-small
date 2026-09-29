@@ -125,6 +125,7 @@ def render_gradesheet_html(data: dict[str, Any]) -> str:
     .header {{ text-align: center; margin-bottom: 6mm; }}
     .school-name {{ font-size: 20px; font-weight: 700; margin-bottom: 1mm; }}
     .school-meta {{ font-size: 10px; color: #333; margin-bottom: 1mm; }}
+    .school-address {{ font-size: 12px; }}
     .exam-title {{ font-size: 15px; font-weight: 700; margin-top: 3mm; }}
     .exam-year {{ font-size: 11px; font-weight: 700; margin-top: 1mm; }}
     .sheet-label {{
@@ -184,7 +185,7 @@ def render_gradesheet_html(data: dict[str, Any]) -> str:
     </div>
     <div class=\"header\">
       <div class=\"school-name\">{school_name}</div>
-      <div class=\"school-meta\">{school_address}</div>
+      <div class=\"school-meta school-address\">{school_address}</div>
       <div class=\"school-meta\">{school_contact}</div>
       <div class=\"exam-title\">{exam_title}</div>
       <div class=\"exam-year\">{exam_year}</div>

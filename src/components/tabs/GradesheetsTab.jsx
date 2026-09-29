@@ -118,6 +118,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
             .gradesheet-header { text-align: center; margin-bottom: 6mm; }
             .gradesheet-school-name { font-size: 20px; font-weight: 700; margin-bottom: 1mm; }
             .gradesheet-school-meta { font-size: 10px; color: #334155; margin-bottom: 1mm; }
+            .gradesheet-school-address { font-size: 12px; }
             .gradesheet-exam-title { font-size: 15px; font-weight: 700; margin-top: 3mm; }
             .gradesheet-exam-year { font-size: 11px; font-weight: 700; margin-top: 1mm; }
             .gradesheet-label { display: inline-block; margin-top: 4mm; padding: 2mm 8mm; border: 1px solid #000; font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
@@ -149,7 +150,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
           <div className="gradesheet-page">
             <div className="gradesheet-header">
               <div className="gradesheet-school-name">{sheetData.school.name || "SCHOOL NAME"}</div>
-              <div className="gradesheet-school-meta">{sheetData.school.address || ""}</div>
+              <div className="gradesheet-school-meta gradesheet-school-address">{sheetData.school.address || ""}</div>
               <div className="gradesheet-school-meta">{sheetData.school.contact || ""}</div>
               <div className="gradesheet-exam-title">{sheetData.school.exam_title || "ANNUAL EXAMINATION"}</div>
               <div className="gradesheet-exam-year">{sheetData.school.exam_year || ""}</div>

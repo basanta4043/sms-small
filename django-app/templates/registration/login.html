@@ -1,0 +1,2 @@
+{% extends "base.html" %}{% block title %}Log in | School Manager{% endblock %}
+{% block content %}<main style="max-width:520px"><p class="eyebrow">School Manager</p><h1>Welcome back.</h1><div class="panel"><form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Log in</button></form><p class="muted">New here? <a href="{% url 'register' %}">Create an account</a></p></div></main>{% endblock %}

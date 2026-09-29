@@ -8,7 +8,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "schooldb")
 DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "Test@123")
 
 def _connection_kwargs(dbname: str | None = None) -> dict[str, Any]:
     return {
@@ -124,6 +124,7 @@ def init_schema() -> None:
             cur.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS fee_months INTEGER NOT NULL DEFAULT 1")
             cur.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount NUMERIC NOT NULL DEFAULT 0")
             cur.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS items JSONB NOT NULL DEFAULT '[]'::jsonb")
+            cur.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS fee_periods JSONB NOT NULL DEFAULT '[]'::jsonb")
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS payments (
@@ -160,11 +161,15 @@ def init_schema() -> None:
                     exam_id INTEGER NOT NULL,
                     student_id INTEGER NOT NULL,
                     marks JSONB NOT NULL,
+                    attendance TEXT,
+                    extracurricular_activities TEXT,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     UNIQUE (user_id, exam_id, student_id)
                 )
                 """
             )
+            cur.execute("ALTER TABLE results ADD COLUMN IF NOT EXISTS attendance TEXT")
+            cur.execute("ALTER TABLE results ADD COLUMN IF NOT EXISTS extracurricular_activities TEXT")
         conn.commit()
     finally:
         conn.close()
@@ -507,7 +512,7 @@ def get_results_for_user(user_id: int | str) -> list[dict[str, Any]]:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, user_id, exam_id, student_id, marks, created_at
+                SELECT id, user_id, exam_id, student_id, marks, attendance, extracurricular_activities, created_at
                 FROM results WHERE user_id = %s ORDER BY id ASC
                 """,
                 (int(user_id),),
@@ -524,7 +529,7 @@ def get_result_for_user(user_id: int | str, exam_id: int | str, student_id: int 
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, user_id, exam_id, student_id, marks, created_at
+                SELECT id, user_id, exam_id, student_id, marks, attendance, extracurricular_activities, created_at
                 FROM results WHERE user_id = %s AND exam_id = %s AND student_id = %s
                 """,
                 (int(user_id), int(exam_id), int(student_id)),
@@ -541,17 +546,21 @@ def create_or_update_result_for_user(user_id: int | str, result: dict[str, Any])
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 """
-                INSERT INTO results (user_id, exam_id, student_id, marks)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO results (user_id, exam_id, student_id, marks, attendance, extracurricular_activities)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (user_id, exam_id, student_id)
-                DO UPDATE SET marks = EXCLUDED.marks
-                RETURNING id, user_id, exam_id, student_id, marks, created_at
+                DO UPDATE SET marks = EXCLUDED.marks,
+                    attendance = EXCLUDED.attendance,
+                    extracurricular_activities = EXCLUDED.extracurricular_activities
+                RETURNING id, user_id, exam_id, student_id, marks, attendance, extracurricular_activities, created_at
                 """,
                 (
                     int(user_id),
                     int(result["exam_id"]),
                     int(result["student_id"]),
                     psycopg2.extras.Json(result.get("marks", [])),
+                    result.get("attendance"),
+                    result.get("extracurricular_activities"),
                 ),
             )
             row = cur.fetchone()
@@ -671,7 +680,7 @@ def get_invoices_for_user(user_id: int | str) -> list[dict[str, Any]]:
             cur.execute(
                 """
                   SELECT id, user_id, student_id, invoice_no, date, amount, method, note, status,
-                      fee_months, discount, items, created_at
+                      fee_months, discount, items, fee_periods, created_at
                 FROM invoices WHERE user_id = %s ORDER BY date DESC, id DESC
                 """,
                 (int(user_id),),
@@ -690,7 +699,7 @@ def create_payment_and_invoice(user_id: int | str, payment: dict[str, Any]) -> d
                 """
                 INSERT INTO invoices (user_id, student_id, invoice_no, date, amount, method, note, status, fee_months, discount, items)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, invoice_no, date, amount, method, note, status, fee_months, discount, items, created_at
+                RETURNING id, invoice_no, date, amount, method, note, status, fee_months, discount, items, fee_periods, created_at
                 """,
                 (
                     int(user_id),
@@ -713,7 +722,7 @@ def create_payment_and_invoice(user_id: int | str, payment: dict[str, Any]) -> d
             cur.execute(
                 """
                   SELECT id, user_id, student_id, invoice_no, date, amount, method, note, status,
-                      fee_months, discount, items, created_at
+                      fee_months, discount, items, fee_periods, created_at
                 FROM invoices WHERE id = %s
                 """,
                 (invoice_id,),
@@ -740,5 +749,55 @@ def create_payment_and_invoice(user_id: int | str, payment: dict[str, Any]) -> d
         invoice_dict = _normalize_decimal_values(dict(invoice))
         payment_dict = _normalize_decimal_values(dict(payment_row))
         return {"invoice": invoice_dict, "payment": payment_dict}
+    finally:
+        conn.close()
+
+
+def create_blank_invoice_for_user(user_id: int | str, invoice_data: dict[str, Any]) -> dict[str, Any] | None:
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id FROM students WHERE id = %s AND user_id = %s",
+                (int(invoice_data["student_id"]), int(user_id)),
+            )
+            if not cur.fetchone():
+                return None
+
+            fee_periods = invoice_data["fee_periods"]
+            cur.execute(
+                """
+                INSERT INTO invoices (user_id, student_id, invoice_no, date, amount, method, note, status, fee_months, discount, items, fee_periods)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s)
+                RETURNING id
+                """,
+                (
+                    int(user_id),
+                    int(invoice_data["student_id"]),
+                    "",
+                    invoice_data["date"],
+                    invoice_data.get("amount", 0),
+                    "",
+                    invoice_data.get("note"),
+                    "Draft",
+                    len(fee_periods),
+                    psycopg2.extras.Json(invoice_data.get("items", [])),
+                    psycopg2.extras.Json(fee_periods),
+                ),
+            )
+            invoice_id = cur.fetchone()["id"]
+            invoice_no = f"INV-{invoice_id:04d}"
+            cur.execute("UPDATE invoices SET invoice_no = %s WHERE id = %s", (invoice_no, invoice_id))
+            cur.execute(
+                """
+                SELECT id, user_id, student_id, invoice_no, date, amount, method, note, status,
+                    fee_months, discount, items, fee_periods, created_at
+                FROM invoices WHERE id = %s
+                """,
+                (invoice_id,),
+            )
+            invoice = cur.fetchone()
+        conn.commit()
+        return _normalize_decimal_values(dict(invoice))
     finally:
         conn.close()

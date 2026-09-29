@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}School Manager{% endblock %}</title>
+  <style>
+    :root { --ink:#17212b; --muted:#65727e; --line:#dce3e8; --accent:#0f766e; --soft:#eef7f5; --paper:#fff; --bg:#f4f6f6; }
+    * { box-sizing:border-box; } body { margin:0; color:var(--ink); background:var(--bg); font:15px/1.5 Georgia, serif; }
+    a { color:inherit; } .topbar { background:#17212b; color:white; padding:16px 5vw; display:flex; justify-content:space-between; align-items:center; }
+    .brand { font-size:22px; font-weight:bold; letter-spacing:.02em; } .topbar a { text-decoration:none; color:#d6ebe8; }
+    main { max-width:1260px; margin:0 auto; padding:36px 5vw 64px; } h1,h2,h3 { margin-top:0; font-family: Georgia, serif; } h1 { font-size:38px; line-height:1.1; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; font:700 12px Arial,sans-serif; letter-spacing:.12em; } .muted { color:var(--muted); }
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--line); margin:28px 0; } .tabs a { padding:10px 14px; text-decoration:none; color:var(--muted); font-family:Arial,sans-serif; } .tabs a.active { color:var(--accent); border-bottom:3px solid var(--accent); }
+    .panel { background:var(--paper); border:1px solid var(--line); padding:24px; margin-bottom:20px; } .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
+    label { display:block; margin:12px 0 5px; font:700 12px Arial,sans-serif; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; } input,select,textarea { width:100%; padding:10px; border:1px solid #cbd5da; background:#fff; font:inherit; } button,.button { border:0; background:var(--accent); color:#fff; padding:10px 15px; cursor:pointer; text-decoration:none; display:inline-block; font:700 13px Arial,sans-serif; } button.secondary,.button.secondary { background:#e7eeee; color:var(--ink); }
+    table { width:100%; border-collapse:collapse; } th,td { text-align:left; padding:11px 8px; border-bottom:1px solid var(--line); vertical-align:top; } th { font:700 11px Arial,sans-serif; text-transform:uppercase; color:var(--muted); } .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin:25px 0; } .stat { padding:18px; background:var(--soft); } .stat strong { display:block; font-size:29px; } .inline { display:inline; } .danger { background:#a33a35; } .messages { padding:0; list-style:none; } .messages li { background:#e8f5ee; padding:12px 15px; margin-bottom:10px; }
+    @media(max-width:650px) { main { padding-top:25px; } h1 { font-size:31px; } .topbar { padding:14px 5vw; } .panel { padding:17px; overflow:auto; } table { min-width:600px; } }
+  </style>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="{% url 'dashboard' %}">School Manager</a>{% if user.is_authenticated %}<span>{{ user.username }} · <a href="{% url 'logout' %}">Log out</a></span>{% endif %}</header>
+{% block content %}{% endblock %}
+</body>
+</html>

@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { Check, Plus, Printer, Search } from "lucide-react";
+import { Check, Plus, Printer, Search, X } from "lucide-react";
 import { Empty, Field, Modal } from "../Shared";
 import { api } from "../../api/client";
 import { camelizeKeys, fmtDate, todayStr, uid } from "../../utils/helpers";
 import NepaliDateInput from "../NepaliDateInput";
+
+const NEPALI_MONTHS = ["Baishak", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"];
 
 function CreateInvoiceForm({ students, feeData, currency, onSave, onClose, saving }) {
   const [studentId, setStudentId] = useState(students[0]?.id || "");
@@ -61,9 +63,84 @@ function CreateInvoiceForm({ students, feeData, currency, onSave, onClose, savin
   );
 }
 
+function CreateBlankInvoiceForm({ students, currency, onSave, onClose, saving }) {
+  const [studentId, setStudentId] = useState(students[0]?.id || "");
+  const [feePeriods, setFeePeriods] = useState([]);
+  const [items, setItems] = useState([{ name: "", amount: "" }]);
+  const [date, setDate] = useState(todayStr());
+  const student = students.find((item) => String(item.id) === String(studentId));
+  const cleanItems = items
+    .filter((item) => item.name.trim())
+    .map((item) => ({ name: item.name.trim(), amount: Math.max(0, Number(item.amount) || 0) }));
+  const total = cleanItems.reduce((sum, item) => sum + item.amount, 0);
+
+  function updateItem(index, key, value) {
+    setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item));
+  }
+
+  function toggleMonth(month) {
+    setFeePeriods((selected) => selected.includes(month)
+      ? selected.filter((item) => item !== month)
+      : NEPALI_MONTHS.filter((item) => selected.includes(item) || item === month));
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    if (!student || feePeriods.length === 0) return;
+    onSave({ studentId, date, feePeriods, items: cleanItems, amount: total });
+  }
+
+  return (
+    <Modal title="Create blank invoice" onClose={onClose}>
+      <form onSubmit={submit}>
+        <Field label="Student">
+          <select className="sm-select" value={studentId} onChange={(event) => setStudentId(event.target.value)}>
+            {students.length === 0 && <option value="">No students yet</option>}
+            {students.map((item) => <option key={item.id} value={item.id}>{item.name} — {item.className}</option>)}
+          </select>
+        </Field>
+        {student && <div className="sm-note" style={{ marginBottom: 14 }}><strong>{student.name}</strong> · Class {student.className || "—"} · Section {student.section || "—"} · Roll {student.rollNo || "—"}</div>}
+        <Field label="Invoice date (BS)"><NepaliDateInput value={date} onChange={(event) => setDate(event.target.value)} /></Field>
+        <fieldset style={{ border: 0, padding: 0, margin: "16px 0 8px" }}>
+          <legend className="sm-label">Fee months to collect</legend>
+          <div className="sm-note" style={{ marginBottom: 10 }}>Choose each Nepali month covered by this blank invoice.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+            {NEPALI_MONTHS.map((month) => (
+              <label key={month} className="sm-note" style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, cursor: "pointer" }}>
+                <input type="checkbox" checked={feePeriods.includes(month)} onChange={() => toggleMonth(month)} />{month}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div style={{ marginTop: 18 }}>
+          <div className="sm-label">Fee particulars and amounts</div>
+          <div className="sm-note" style={{ marginBottom: 10 }}>Enter each fee item. The invoice total is calculated automatically.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(150px, 1fr) 140px 36px", gap: 8, marginBottom: 6, color: "var(--slate)", fontSize: 11, textTransform: "uppercase" }}>
+            <span>Particular</span><span>Amount</span><span />
+          </div>
+          {items.map((item, index) => (
+            <div key={index} style={{ display: "grid", gridTemplateColumns: "minmax(150px, 1fr) 140px 36px", gap: 8, marginBottom: 8 }}>
+              <input className="sm-input" aria-label={`Particular ${index + 1}`} placeholder="e.g. Monthly fee" value={item.name} onChange={(event) => updateItem(index, "name", event.target.value)} />
+              <input className="sm-input" aria-label={`Amount ${index + 1}`} placeholder="Amount" type="number" min="0" step="0.01" value={item.amount} onChange={(event) => updateItem(index, "amount", event.target.value)} />
+              <button type="button" className="sm-icon-btn" aria-label={`Remove particular ${index + 1}`} disabled={items.length === 1} onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}><X size={16} /></button>
+            </div>
+          ))}
+          <button type="button" className="sm-btn sm-btn-ghost" onClick={() => setItems((current) => [...current, { name: "", amount: "" }])}><Plus size={14} /> Add particular</button>
+          <div className="sm-note" style={{ marginTop: 10 }}>Selected months: {feePeriods.length ? feePeriods.join(", ") : "no months selected"} · Total: <strong>{currency}{total.toFixed(2)}</strong></div>
+        </div>
+        <div className="sm-modal-actions">
+          <button type="button" className="sm-btn sm-btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="sm-btn sm-btn-primary" disabled={saving || !student || feePeriods.length === 0}><Check size={16} /> {saving ? "Creating..." : "Create invoice"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export default function InvoicesTab({ feeData, students, currency, token, setFeeData, onOpen }) {
   const [q, setQ] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showBlankCreate, setShowBlankCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const filtered = useMemo(() => {
@@ -102,11 +179,58 @@ export default function InvoicesTab({ feeData, students, currency, token, setFee
     }
   }
 
+  async function createBlankInvoice(data) {
+    setError("");
+    setSaving(true);
+    try {
+      const student = students.find((item) => String(item.id) === String(data.studentId));
+      let invoice;
+      if (token) {
+        const response = await api("/fees/invoices", { method: "POST", body: {
+          student_id: data.studentId, date: data.date, fee_periods: data.feePeriods, items: data.items,
+        }, token });
+        invoice = camelizeKeys(response.invoice);
+      } else {
+        invoice = {
+          id: uid(), invoiceNo: `INV-${String(feeData.nextInvoiceNo).padStart(4, "0")}`,
+          studentId: data.studentId, date: data.date, amount: data.amount, method: "", note: "",
+          status: "Draft", feeMonths: data.feePeriods.length, feePeriods: data.feePeriods,
+          discount: 0, items: data.items, studentName: student?.name || "—", studentClass: student?.className || "—",
+          studentSection: student?.section || "—", studentRollNo: student?.rollNo || "—",
+        };
+      }
+      invoice = {
+        ...invoice,
+        studentName: invoice.studentName || student?.name || "—",
+        studentClass: invoice.studentClass || student?.className || "—",
+        studentSection: invoice.studentSection || student?.section || "—",
+        studentRollNo: invoice.studentRollNo || student?.rollNo || "—",
+        feePeriods: invoice.feePeriods || data.feePeriods,
+        feeMonths: invoice.feeMonths || data.feePeriods.length,
+        items: invoice.items || data.items,
+      };
+      setFeeData((previous) => ({
+        ...previous,
+        invoices: [...previous.invoices, invoice],
+        nextInvoiceNo: token ? previous.nextInvoiceNo : previous.nextInvoiceNo + 1,
+      }));
+      setShowBlankCreate(false);
+      onOpen(invoice);
+    } catch (e) {
+      setError(e.message || "Unable to create blank invoice.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="sm-panel">
       <div className="sm-panel-head">
         <div className="sm-search"><Search size={15} color="var(--slate)" /><input placeholder="Search invoice #, student..." value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <button className="sm-btn sm-btn-gold" onClick={() => setShowCreate(true)}><Plus size={16} /> Create invoice</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="sm-btn sm-btn-ghost" onClick={() => setShowBlankCreate(true)}><Plus size={16} /> Blank invoice</button>
+          <button className="sm-btn sm-btn-gold" onClick={() => setShowCreate(true)}><Plus size={16} /> Create invoice</button>
+        </div>
       </div>
       {error && <div className="sm-error" style={{ margin: "0 18px 12px" }}>{error}</div>}
       {filtered.length === 0 ? <Empty text="No invoices yet. Create the first invoice for a student." /> : (
@@ -114,12 +238,13 @@ export default function InvoicesTab({ feeData, students, currency, token, setFee
           <thead><tr><th>Invoice #</th><th>Date</th><th>Student</th><th>Amount</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {[...filtered].sort((a, b) => (a.date < b.date ? 1 : -1)).map((inv) => (
-              <tr key={inv.id}><td className="sm-mono">{inv.invoiceNo}</td><td>{fmtDate(inv.date)}</td><td>{inv.studentName}</td><td className="sm-mono">{currency}{inv.amount}</td><td><span className="sm-pill sm-pill-sage">{inv.status}</span></td><td><button className="sm-icon-btn" onClick={() => onOpen(inv)} title="Print invoice"><Printer size={15} /></button></td></tr>
+              <tr key={inv.id}><td className="sm-mono">{inv.invoiceNo}</td><td>{fmtDate(inv.date)}</td><td>{inv.studentName}</td><td className="sm-mono">{currency}{inv.amount || 0}</td><td><span className="sm-pill sm-pill-sage">{inv.status}</span></td><td><button className="sm-icon-btn" onClick={() => onOpen(inv)} title="Print invoice"><Printer size={15} /></button></td></tr>
             ))}
           </tbody>
         </table>
       )}
       {showCreate && <CreateInvoiceForm students={students} feeData={feeData} currency={currency} onSave={createInvoice} onClose={() => setShowCreate(false)} saving={saving} />}
+      {showBlankCreate && <CreateBlankInvoiceForm students={students} currency={currency} onSave={createBlankInvoice} onClose={() => setShowBlankCreate(false)} saving={saving} />}
     </div>
   );
 }

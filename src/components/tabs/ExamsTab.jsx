@@ -1,14 +1,14 @@
 import React, { useState } from "react";
-import { Plus, X, Check, Trash2 } from "lucide-react";
+import { Plus, X, Check, Trash2, Pencil } from "lucide-react";
 import { Modal, Field, Empty } from "../Shared";
 import { api } from "../../api/client";
 import { camelizeKeys } from "../../utils/helpers";
 
-function ExamForm({ onSave, onClose }) {
-  const [name, setName] = useState("");
-  const [term, setTerm] = useState("");
-  const [className, setClassName] = useState("");
-  const [subjects, setSubjects] = useState([{ name: "", maxMarks: 100, passMarks: 33 }]);
+function ExamForm({ initial, onSave, onClose }) {
+  const [name, setName] = useState(initial?.name || "");
+  const [term, setTerm] = useState(initial?.term || "");
+  const [className, setClassName] = useState(initial?.className || "");
+  const [subjects, setSubjects] = useState(initial?.subjects?.length ? initial.subjects : [{ name: "", maxMarks: 100, passMarks: 33 }]);
 
   function updateSub(i, k, v) { setSubjects((p) => p.map((s, idx) => (idx === i ? { ...s, [k]: v } : s))); }
   function addSub() { setSubjects((p) => [...p, { name: "", maxMarks: 100, passMarks: 33 }]); }
@@ -19,11 +19,11 @@ function ExamForm({ onSave, onClose }) {
     if (!name.trim() || !className.trim()) return;
     const clean = subjects.filter((s) => s.name.trim()).map((s) => ({ name: s.name.trim(), maxMarks: Number(s.maxMarks) || 100, passMarks: Number(s.passMarks) || 33 }));
     if (clean.length === 0) return;
-    onSave({ name: name.trim(), term: term.trim(), className: className.trim(), subjects: clean });
+    onSave({ id: initial?.id, name: name.trim(), term: term.trim(), className: className.trim(), subjects: clean });
   }
 
   return (
-    <Modal title="Create exam" onClose={onClose} wide>
+    <Modal title={initial ? "Edit exam" : "Create exam"} onClose={onClose} wide>
       <form onSubmit={submit}>
         <div className="sm-form-grid">
           <Field label="Exam name"><input className="sm-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Final Term Exam" autoFocus /></Field>
@@ -43,7 +43,7 @@ function ExamForm({ onSave, onClose }) {
         <button type="button" className="sm-btn sm-btn-ghost" onClick={addSub}><Plus size={14} /> Add subject</button>
         <div className="sm-modal-actions">
           <button type="button" className="sm-btn sm-btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="sm-btn sm-btn-primary"><Check size={16} /> Create exam</button>
+          <button className="sm-btn sm-btn-primary"><Check size={16} /> {initial ? "Save changes" : "Create exam"}</button>
         </div>
       </form>
     </Modal>
@@ -52,16 +52,18 @@ function ExamForm({ onSave, onClose }) {
 
 export default function ExamsTab({ exams, setExams, token }) {
   const [showForm, setShowForm] = useState(false);
+  const [editingExam, setEditingExam] = useState(null);
   const [err, setErr] = useState("");
 
   async function save(exam) {
     setErr("");
     try {
       const payload = { name: exam.name, term: exam.term || null, class_name: exam.className, subjects: exam.subjects };
-      const data = await api("/exams", { method: "POST", body: payload, token });
+      const data = await api(exam.id ? `/exams/${exam.id}` : "/exams", { method: exam.id ? "PUT" : "POST", body: payload, token });
       const saved = camelizeKeys(data.exam);
-      setExams((p) => [...p, saved]);
+      setExams((p) => exam.id ? p.map((item) => String(item.id) === String(saved.id) ? saved : item) : [...p, saved]);
       setShowForm(false);
+      setEditingExam(null);
     } catch (e) {
       setErr(e.message || "Unable to save exam.");
     }
@@ -81,7 +83,7 @@ export default function ExamsTab({ exams, setExams, token }) {
     <div className="sm-panel">
       <div className="sm-panel-head">
         <span style={{ fontSize: 13, color: "var(--slate)" }}>Define exams and their subjects before entering results.</span>
-        <button className="sm-btn sm-btn-gold" onClick={() => setShowForm(true)}><Plus size={16} /> Create exam</button>
+        <button className="sm-btn sm-btn-gold" onClick={() => { setEditingExam(null); setShowForm(true); }}><Plus size={16} /> Create exam</button>
       </div>
       {err && <div className="sm-error" style={{ margin: "0 18px 12px" }}>{err}</div>}
       {exams.length === 0 ? <Empty text="No exams yet." /> : (
@@ -94,13 +96,16 @@ export default function ExamsTab({ exams, setExams, token }) {
                 <td>{ex.term || "—"}</td>
                 <td>{ex.className}</td>
                 <td style={{ color: "var(--slate)" }}>{ex.subjects.map((s) => s.name).join(", ")}</td>
-                <td><button className="sm-icon-btn" onClick={() => remove(ex.id)}><Trash2 size={15} /></button></td>
+                <td>
+                  <button className="sm-icon-btn" aria-label={`Edit ${ex.name}`} onClick={() => { setEditingExam(ex); setShowForm(true); }}><Pencil size={15} /></button>
+                  <button className="sm-icon-btn" aria-label={`Delete ${ex.name}`} onClick={() => remove(ex.id)}><Trash2 size={15} /></button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
-      {showForm && <ExamForm onSave={save} onClose={() => setShowForm(false)} />}
+      {showForm && <ExamForm initial={editingExam} onSave={save} onClose={() => { setShowForm(false); setEditingExam(null); }} />}
     </div>
   );
 }

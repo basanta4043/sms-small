@@ -10,6 +10,8 @@ export default function ResultsTab({ exams, students, results, setResults, token
   const classStudents = exam ? students.filter((s) => String(s.className || "").trim().toLowerCase() === String(exam.className || "").trim().toLowerCase()) : [];
   const [studentId, setStudentId] = useState("");
   const [marks, setMarks] = useState({});
+  const [attendance, setAttendance] = useState("");
+  const [extracurricularActivities, setExtracurricularActivities] = useState("");
   const [err, setErr] = useState("");
 
   useEffect(() => { setExamId(exams[0]?.id != null ? String(exams[0].id) : ""); }, [exams.length]);
@@ -22,8 +24,12 @@ export default function ResultsTab({ exams, students, results, setResults, token
       const m = {};
       existing.marks.forEach((mk) => { m[mk.subject] = mk.obtained; });
       setMarks(m);
+      setAttendance(existing.attendance || "");
+      setExtracurricularActivities(existing.extracurricularActivities || "");
     } else {
       setMarks({});
+      setAttendance("");
+      setExtracurricularActivities("");
     }
   }
 
@@ -34,7 +40,13 @@ export default function ResultsTab({ exams, students, results, setResults, token
       const markRows = exam.subjects.map((sub) => ({ subject: sub.name, obtained: Number(marks[sub.name]) || 0, maxMarks: sub.maxMarks }));
       const data = await api("/results", {
         method: "POST",
-        body: { exam_id: Number(examId), student_id: Number(studentId), marks: markRows },
+        body: {
+          exam_id: Number(examId),
+          student_id: Number(studentId),
+          marks: markRows,
+          attendance: attendance.trim(),
+          extracurricular_activities: extracurricularActivities.trim(),
+        },
         token,
       });
       const saved = camelizeKeys(data.result);
@@ -42,7 +54,7 @@ export default function ResultsTab({ exams, students, results, setResults, token
         const filtered = prev.filter((r) => !(String(r.examId) === String(saved.examId) && String(r.studentId) === String(saved.studentId)));
         return [...filtered, saved];
       });
-      setStudentId(""); setMarks({});
+      setStudentId(""); setMarks({}); setAttendance(""); setExtracurricularActivities("");
     } catch (e) {
       setErr(e.message || "Unable to save marks.");
     }
@@ -94,6 +106,12 @@ export default function ResultsTab({ exams, students, results, setResults, token
                     <input className="sm-input" type="number" min="0" max={sub.maxMarks} value={marks[sub.name] ?? ""} onChange={(e) => setMarks((p) => ({ ...p, [sub.name]: e.target.value }))} />
                   </Field>
                 ))}
+                <Field label="Attendance (e.g. 85/90)">
+                  <input className="sm-input" value={attendance} onChange={(e) => setAttendance(e.target.value)} placeholder="Present days / total days" />
+                </Field>
+                <Field label="Extra-curricular activities / grade">
+                  <input className="sm-input" value={extracurricularActivities} onChange={(e) => setExtracurricularActivities(e.target.value)} placeholder="e.g. Football team — A" />
+                </Field>
                 <button className="sm-btn sm-btn-primary" onClick={saveMarks}><Check size={16} /> Save marks</button>
               </div>
             ) : <Empty text="Choose a student on the left to enter or edit marks." />}

@@ -125,8 +125,9 @@ export function InvoiceDoc({ invoice, school, currency, onClose }) {
   const feeMonth = (() => {
     return fmtBsMonth(invoice.date);
   })();
-  const feePeriod = invoice.feeMonths > 1 ? `${feeMonth} (${invoice.feeMonths} months)` : feeMonth;
-  const lineItems = invoice.items?.length ? invoice.items : [{ name: invoice.note ? `Fee payment — ${invoice.note}` : "Fee payment", amount: invoice.amount }];
+  const isBlankDraft = invoice.status === "Draft";
+  const feePeriod = invoice.feePeriods?.length ? invoice.feePeriods.join(", ") : invoice.feeMonths > 1 ? `${feeMonth} (${invoice.feeMonths} months)` : feeMonth;
+  const lineItems = invoice.items?.length ? invoice.items : isBlankDraft ? [] : [{ name: invoice.note ? `Fee payment — ${invoice.note}` : "Fee payment", amount: invoice.amount }];
 
   const phoneLine = [school.phone, school.email].filter(Boolean).join(" | ");
 
@@ -179,7 +180,7 @@ export function InvoiceDoc({ invoice, school, currency, onClose }) {
               {invoice.discount > 0 && <tr><td colSpan={2} style={{ textAlign: "right", padding: "8px 10px" }}>Discount</td><td className="sm-mono" style={{ padding: "8px 10px", textAlign: "right" }}>-{currency}{invoice.discount}</td></tr>}
               <tr>
                 <td colSpan={2} style={{ textAlign: "right", padding: "10px 10px", fontWeight: 700 }}>Total</td>
-                <td className="sm-mono" style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700 }}>{currency}{invoice.amount}</td>
+                <td className="sm-mono" style={{ padding: "10px 10px", textAlign: "right", fontWeight: 700 }}>{isBlankDraft && !invoice.amount ? "" : `${currency}${invoice.amount}`}</td>
               </tr>
             </tfoot>
           </table>
