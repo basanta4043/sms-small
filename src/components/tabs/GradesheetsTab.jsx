@@ -3,7 +3,7 @@ import { Printer } from "lucide-react";
 import { Modal, Empty } from "../Shared";
 import { Field } from "../Shared";
 import { api } from "../../api/client";
-import { gradeFor, todayBs } from "../../utils/helpers";
+import { gradeFor } from "../../utils/helpers";
 
 function computeReport(exam, student, result, gradeScale) {
   const rows = exam.subjects.map((sub) => {
@@ -78,7 +78,6 @@ function buildSheetData(exam, student, report, school) {
     },
     student: {
       name: student?.name || "",
-      id_no: student?.id || student?.studentId || student?.student_id || "",
       class: student?.className || student?.class || "",
       section: student?.section || "",
       roll_no: student?.rollNo || student?.roll_no || "",
@@ -115,7 +114,6 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
   });
   const attendance = attendanceDetails(sheetData.summary.attendance);
   const minimumRows = Math.max(7, sheetData.subjects.length);
-  const issueDate = sheetData.footer.result_issue_date || todayBs();
 
   return (
     <Modal title="" onClose={onClose} wide>
@@ -158,6 +156,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
             .gradesheet-scale-table th, .gradesheet-scale-table td, .gradesheet-attendance-table th, .gradesheet-attendance-table td { border: 1px solid #000; padding: 1.05mm .8mm; text-align: center; }
             .gradesheet-scale-title, .gradesheet-attendance-title { font-weight: 700; font-size: 9px; }
             .gradesheet-footer { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 12mm; font-size: 9px; }
+            .gradesheet-seal-wrap { display: flex; flex-direction: column; align-items: center; gap: 1.5mm; font-size: 7px; font-weight: 700; }
             .gradesheet-seal { width: 22mm; height: 22mm; border: 1px solid #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 7px; font-weight: 700; text-align: center; }
             .gradesheet-seal img { width: 100%; height: 100%; object-fit: contain; }
             .gradesheet-signatures { display: flex; flex: 1; justify-content: space-around; gap: 7mm; margin-left: 8mm; }
@@ -178,7 +177,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
               <span>Name: {sheetData.student.name}</span>
               <span>Class: {sheetData.student.class}</span>
               <span>Section: {sheetData.student.section}</span>
-              <span>ID No.: {sheetData.student.id_no || sheetData.student.roll_no || ""} &nbsp; Roll No.: {sheetData.student.roll_no}</span>
+              <span>Roll No.: {sheetData.student.roll_no}</span>
             </div>
             <table className="gradesheet-table">
               <thead>
@@ -240,10 +239,13 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
               </div>
             </div>
             <div className="gradesheet-footer">
-              <div className="gradesheet-seal">{sheetData.school.logo_url ? <img src={sheetData.school.logo_url} alt="School seal" /> : "SCHOOL SEAL"}</div>
+              <div className="gradesheet-seal-wrap">
+                <div className="gradesheet-seal">{sheetData.school.logo_url ? <img src={sheetData.school.logo_url} alt="School logo" /> : "SCHOOL LOGO"}</div>
+                <span>SCHOOL SEAL</span>
+              </div>
               <div className="gradesheet-signatures">
                 <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>Class Teacher</div>
-                <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>{issueDate}</div>
+                <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>Issue Date</div>
                 <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>Principal</div>
               </div>
             </div>
