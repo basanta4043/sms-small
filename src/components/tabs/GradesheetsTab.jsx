@@ -7,7 +7,7 @@ import { gradeFor } from "../../utils/helpers";
 
 function computeReport(exam, student, result, gradeScale) {
   const rows = exam.subjects.map((sub) => {
-    const m = result?.marks.find((mk) => mk.subject === sub.name);
+    const m = (result?.marks || []).find((mk) => mk.subject === sub.name);
     const thMaxMarks = Number(sub.thMaxMarks ?? sub.maxMarks) || 0;
     const prMaxMarks = sub.hasPractical ? Number(sub.prMaxMarks) || 0 : 0;
     const thObtained = Number(m?.thObtained ?? m?.th_obtained ?? m?.obtained) || 0;
@@ -54,6 +54,21 @@ function attendanceDetails(value) {
   };
 }
 
+function classRankForStudent(exam, classStudents, results, examId, studentId, gradeScale) {
+  const classScores = classStudents.flatMap((classStudent) => {
+    const result = results.find((item) =>
+      String(item.examId ?? item.exam_id) === String(examId)
+      && String(item.studentId ?? item.student_id) === String(classStudent.id)
+    );
+    if (!result) return [];
+    const report = computeReport(exam, classStudent, result, gradeScale);
+    return [{ studentId: String(classStudent.id), gpa: gradePointForGrade(report.overall.grade) }];
+  });
+  const current = classScores.find((item) => item.studentId === String(studentId));
+  if (!current) return "—";
+  return classScores.filter((item) => item.gpa > current.gpa).length + 1;
+}
+
 function buildSheetData(exam, student, report, school) {
   const subjectRows = (report?.rows || []).map((row, idx) => ({
     name: row.subject || `Subject ${idx + 1}`,
@@ -98,7 +113,7 @@ function buildSheetData(exam, student, report, school) {
   };
 }
 
-function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClose }) {
+function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, rank, onClose }) {
   const sheetData = sheet || buildSheetData(exam, student, report, school);
   const scaleRows = (gradeScale || []).map((row, idx) => {
     const next = gradeScale[idx + 1];
@@ -140,7 +155,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
             .gradesheet-label { margin-top: 2mm; font-size: 17px; font-weight: 700; font-style: italic; }
             .gradesheet-exam-title { font-size: 12px; font-weight: 700; margin-top: 1mm; }
             .gradesheet-exam-year { font-size: 10px; font-weight: 700; margin-top: 1mm; }
-            .gradesheet-student-info { display: grid; grid-template-columns: 1.2fr 1fr .8fr .75fr; gap: 2mm; font-size: 10px; font-weight: 700; margin: 3mm 0 2mm; }
+            .gradesheet-student-info { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 2mm; font-size: 10px; font-weight: 700; margin: 3mm 0 2mm; }
             .gradesheet-table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
             .gradesheet-table th, .gradesheet-table td { border: 1px solid #000; padding: 1.05mm .8mm; text-align: center; vertical-align: middle; }
             .gradesheet-table th { background: #f8fafc; font-weight: 700; }
@@ -176,8 +191,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
             <div className="gradesheet-student-info">
               <span>Name: {sheetData.student.name}</span>
               <span>Class: {sheetData.student.class}</span>
-              <span>Section: {sheetData.student.section}</span>
-              <span>Roll No.: {sheetData.student.roll_no}</span>
+              <span>Roll No.: {sheetData.student.roll_no} &nbsp; Class Rank: {rank}</span>
             </div>
             <table className="gradesheet-table">
               <thead>
@@ -271,7 +285,8 @@ export default function GradesheetsTab({ exams, students, results, gradeScale, s
       const student = classStudents.find((s) => String(s.id) === String(sId));
       const data = await api(`/gradesheets/${examId}/${sId}`, { token });
       const report = data.report || computeReport(exam, student, null, gradeScale);
-      setDoc({ student, report, sheet: data.sheet, gradeScale });
+      const rank = classRankForStudent(exam, classStudents, results, examId, sId, gradeScale);
+      setDoc({ student, report, sheet: data.sheet, gradeScale, rank });
     } catch (e) {
       setErr(e.message || "Unable to load gradesheet.");
     }
@@ -311,7 +326,7 @@ export default function GradesheetsTab({ exams, students, results, gradeScale, s
           )}
         </div>
       )}
-      {doc && <GradesheetDoc exam={exam} student={doc.student} report={doc.report} school={school} sheet={doc.sheet} gradeScale={doc.gradeScale} onClose={() => setDoc(null)} />}
+      {doc && <GradesheetDoc exam={exam} student={doc.student} report={doc.report} school={school} sheet={doc.sheet} gradeScale={doc.gradeScale} rank={doc.rank} onClose={() => setDoc(null)} />}
     </div>
   );
 }
