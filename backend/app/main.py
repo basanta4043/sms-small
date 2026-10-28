@@ -238,15 +238,34 @@ def _build_gradesheet_report(exam: dict[str, Any], result: dict[str, Any]) -> di
     rows = []
     for subject in exam_subjects:
         mark_row = next((item for item in result.get("marks", []) if str(item.get("subject", "")).lower() == str(subject.get("name", "")).lower()), None)
-        obtained = float(mark_row.get("obtained", 0) or 0) if mark_row else 0.0
-        max_marks = float(subject.get("maxMarks", 0) or 0)
+        has_practical = bool(subject.get("hasPractical"))
+        th_max_marks = float(subject.get("thMaxMarks", subject.get("maxMarks", 0)) or 0)
+        pr_max_marks = float(subject.get("prMaxMarks", 0) or 0) if has_practical else 0.0
+        max_marks = th_max_marks + pr_max_marks
+        if mark_row:
+            th_value = mark_row.get("thObtained", mark_row.get("th_obtained"))
+            pr_value = mark_row.get("prObtained", mark_row.get("pr_obtained"))
+            th_obtained = float(th_value if th_value is not None else mark_row.get("obtained", 0) or 0)
+            pr_obtained = float(pr_value or 0) if has_practical else 0.0
+        else:
+            th_obtained = pr_obtained = 0.0
+        obtained = th_obtained + pr_obtained
         pct = (obtained / max_marks * 100) if max_marks else 0.0
         grade_info = _grade_for_percentage(pct)
+        th_grade = _grade_for_percentage(th_obtained / th_max_marks * 100)["grade"] if th_max_marks else ""
+        pr_grade = _grade_for_percentage(pr_obtained / pr_max_marks * 100)["grade"] if pr_max_marks else ""
         rows.append(
             {
                 "subject": subject.get("name"),
                 "maxMarks": max_marks,
                 "obtained": obtained,
+                "thMaxMarks": th_max_marks,
+                "prMaxMarks": pr_max_marks,
+                "thObtained": th_obtained,
+                "prObtained": pr_obtained,
+                "thGrade": th_grade,
+                "prGrade": pr_grade,
+                "hasPractical": has_practical,
                 "pct": round(pct, 1),
                 "grade": grade_info["grade"],
                 "pass": obtained >= float(subject.get("passMarks", 0) or 0),
@@ -274,8 +293,8 @@ def _build_gradesheet_sheet(exam: dict[str, Any], student: dict[str, Any] | None
             {
                 "name": row.get("subject") or "",
                 "credit_hour": 1,
-                "th_grade": row.get("grade") or "",
-                "pr_grade": row.get("grade") or "",
+                "th_grade": row.get("thGrade") or "",
+                "pr_grade": row.get("prGrade") or "",
                 "final_grade": row.get("grade") or "",
                 "grade_point": round(_grade_point_for_grade(row.get("grade")), 2),
                 "total_marks": row.get("obtained", 0),
@@ -290,10 +309,7 @@ def _build_gradesheet_sheet(exam: dict[str, Any], student: dict[str, Any] | None
         "highest_total": report.get("totalMax", 0),
         "percentage": report.get("overallPct", 0),
         "attendance": result.get("attendance") or "",
-        "rank": "",
-        "rank_section": "",
         "extracurricular_grade": result.get("extracurricular_activities") or "",
-        "teacher_views": f"{overall.get('remark', '')} — {'PASS' if report.get('allPass') else 'NEEDS ATTENTION'}",
     }
 
     return {
@@ -301,11 +317,13 @@ def _build_gradesheet_sheet(exam: dict[str, Any], student: dict[str, Any] | None
             "name": (school or {}).get("name") or "",
             "address": (school or {}).get("address") or "",
             "contact": (school or {}).get("phone") or (school or {}).get("email") or "",
+            "logo_url": (school or {}).get("logo_url") or "",
             "exam_title": exam.get("name", "ANNUAL EXAMINATION"),
             "exam_year": exam.get("term") or "",
         },
         "student": {
             "name": (student or {}).get("name") or "",
+            "id_no": (student or {}).get("id") or "",
             "class": (student or {}).get("class_name") or "",
             "section": (student or {}).get("section") or "",
             "roll_no": (student or {}).get("roll_no") or "",
@@ -315,7 +333,6 @@ def _build_gradesheet_sheet(exam: dict[str, Any], student: dict[str, Any] | None
         "footer": {
             "result_issue_date": "",
             "class_teacher": "",
-            "exam_controller": "",
             "principal": "",
         },
     }

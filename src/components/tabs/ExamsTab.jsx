@@ -8,16 +8,34 @@ function ExamForm({ initial, onSave, onClose }) {
   const [name, setName] = useState(initial?.name || "");
   const [term, setTerm] = useState(initial?.term || "");
   const [className, setClassName] = useState(initial?.className || "");
-  const [subjects, setSubjects] = useState(initial?.subjects?.length ? initial.subjects : [{ name: "", maxMarks: 100, passMarks: 33 }]);
+  const [subjects, setSubjects] = useState(initial?.subjects?.length
+    ? initial.subjects.map((subject) => ({
+      ...subject,
+      hasPractical: Boolean(subject.hasPractical),
+      thMaxMarks: subject.thMaxMarks ?? subject.maxMarks ?? 100,
+      prMaxMarks: subject.prMaxMarks ?? 0,
+    }))
+    : [{ name: "", hasPractical: false, thMaxMarks: 100, prMaxMarks: 0, passMarks: 33 }]);
 
   function updateSub(i, k, v) { setSubjects((p) => p.map((s, idx) => (idx === i ? { ...s, [k]: v } : s))); }
-  function addSub() { setSubjects((p) => [...p, { name: "", maxMarks: 100, passMarks: 33 }]); }
+  function addSub() { setSubjects((p) => [...p, { name: "", hasPractical: false, thMaxMarks: 100, prMaxMarks: 0, passMarks: 33 }]); }
   function removeSub(i) { setSubjects((p) => p.filter((_, idx) => idx !== i)); }
 
   function submit(e) {
     e.preventDefault();
     if (!name.trim() || !className.trim()) return;
-    const clean = subjects.filter((s) => s.name.trim()).map((s) => ({ name: s.name.trim(), maxMarks: Number(s.maxMarks) || 100, passMarks: Number(s.passMarks) || 33 }));
+    const clean = subjects.filter((s) => s.name.trim()).map((s) => {
+      const thMaxMarks = Number(s.thMaxMarks) || 100;
+      const prMaxMarks = s.hasPractical ? Number(s.prMaxMarks) || 50 : 0;
+      return {
+        name: s.name.trim(),
+        hasPractical: Boolean(s.hasPractical),
+        thMaxMarks,
+        prMaxMarks,
+        maxMarks: thMaxMarks + prMaxMarks,
+        passMarks: Number(s.passMarks) || 33,
+      };
+    });
     if (clean.length === 0) return;
     onSave({ id: initial?.id, name: name.trim(), term: term.trim(), className: className.trim(), subjects: clean });
   }
@@ -33,11 +51,17 @@ function ExamForm({ initial, onSave, onClose }) {
         <div className="sm-divider" />
         <label className="sm-label">Subjects</label>
         {subjects.map((s, i) => (
-          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(140px, 1fr) 100px 100px 100px auto auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
             <input className="sm-input" placeholder="Subject name" value={s.name} onChange={(e) => updateSub(i, "name", e.target.value)} />
-            <input className="sm-input" style={{ maxWidth: 110 }} type="number" placeholder="Max marks" value={s.maxMarks} onChange={(e) => updateSub(i, "maxMarks", e.target.value)} />
-            <input className="sm-input" style={{ maxWidth: 110 }} type="number" placeholder="Pass marks" value={s.passMarks} onChange={(e) => updateSub(i, "passMarks", e.target.value)} />
-            <button type="button" className="sm-icon-btn" onClick={() => removeSub(i)}><X size={16} /></button>
+            <input className="sm-input" type="number" min="1" placeholder="TH full marks" aria-label={`${s.name || "Subject"} theory full marks`} value={s.thMaxMarks} onChange={(e) => updateSub(i, "thMaxMarks", e.target.value)} />
+            {s.hasPractical
+              ? <input className="sm-input" type="number" min="1" placeholder="PR full marks" aria-label={`${s.name || "Subject"} practical full marks`} value={s.prMaxMarks || 50} onChange={(e) => updateSub(i, "prMaxMarks", e.target.value)} />
+              : <span />}
+            <input className="sm-input" type="number" min="0" placeholder="Pass marks" aria-label={`${s.name || "Subject"} pass marks`} value={s.passMarks} onChange={(e) => updateSub(i, "passMarks", e.target.value)} />
+            <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, whiteSpace: "nowrap" }}>
+              <input type="checkbox" checked={s.hasPractical} onChange={(e) => updateSub(i, "hasPractical", e.target.checked)} /> Has practical
+            </label>
+            <button type="button" className="sm-icon-btn" aria-label={`Remove ${s.name || "subject"}`} onClick={() => removeSub(i)}><X size={16} /></button>
           </div>
         ))}
         <button type="button" className="sm-btn sm-btn-ghost" onClick={addSub}><Plus size={14} /> Add subject</button>

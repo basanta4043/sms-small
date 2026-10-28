@@ -3,17 +3,24 @@ import { Printer } from "lucide-react";
 import { Modal, Empty } from "../Shared";
 import { Field } from "../Shared";
 import { api } from "../../api/client";
-import { gradeFor } from "../../utils/helpers";
+import { gradeFor, todayBs } from "../../utils/helpers";
 
 function computeReport(exam, student, result, gradeScale) {
   const rows = exam.subjects.map((sub) => {
     const m = result?.marks.find((mk) => mk.subject === sub.name);
-    const obtained = m ? m.obtained : 0;
-    const pct = sub.maxMarks ? (obtained / sub.maxMarks) * 100 : 0;
+    const thMaxMarks = Number(sub.thMaxMarks ?? sub.maxMarks) || 0;
+    const prMaxMarks = sub.hasPractical ? Number(sub.prMaxMarks) || 0 : 0;
+    const thObtained = Number(m?.thObtained ?? m?.th_obtained ?? m?.obtained) || 0;
+    const prObtained = sub.hasPractical ? Number(m?.prObtained ?? m?.pr_obtained) || 0 : 0;
+    const maxMarks = thMaxMarks + prMaxMarks;
+    const obtained = thObtained + prObtained;
+    const pct = maxMarks ? (obtained / maxMarks) * 100 : 0;
+    const thGrade = thMaxMarks ? gradeFor((thObtained / thMaxMarks) * 100, gradeScale).grade : "";
+    const prGrade = prMaxMarks ? gradeFor((prObtained / prMaxMarks) * 100, gradeScale).grade : "";
     const g = gradeFor(pct, gradeScale);
-    return { subject: sub.name, maxMarks: sub.maxMarks, obtained, pct, grade: g.grade, pass: obtained >= sub.passMarks };
+    return { subject: sub.name, maxMarks, thMaxMarks, prMaxMarks, thObtained, prObtained, obtained, pct, thGrade, prGrade, grade: g.grade, pass: obtained >= sub.passMarks };
   });
-  const totalMax = exam.subjects.reduce((s, sub) => s + sub.maxMarks, 0);
+  const totalMax = rows.reduce((s, row) => s + row.maxMarks, 0);
   const totalObtained = rows.reduce((s, r) => s + r.obtained, 0);
   const overallPct = totalMax ? (totalObtained / totalMax) * 100 : 0;
   const overall = gradeFor(overallPct, gradeScale);
@@ -35,12 +42,24 @@ function gradePointForGrade(grade) {
   return mapping[String(grade || "").trim()] ?? 0.0;
 }
 
+function attendanceDetails(value) {
+  const match = String(value || "").match(/^\s*(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/);
+  if (!match) return { working: value || "", attended: "", absent: "" };
+  const attended = Number(match[1]);
+  const working = Number(match[2]);
+  return {
+    working,
+    attended,
+    absent: Math.max(0, working - attended),
+  };
+}
+
 function buildSheetData(exam, student, report, school) {
   const subjectRows = (report?.rows || []).map((row, idx) => ({
     name: row.subject || `Subject ${idx + 1}`,
     credit_hour: 1,
-    th_grade: row.grade,
-    pr_grade: row.grade,
+    th_grade: row.thGrade || row.grade,
+    pr_grade: row.prGrade || "",
     final_grade: row.grade,
     grade_point: Number(gradePointForGrade(row.grade).toFixed(2)),
     total_marks: row.obtained,
@@ -53,11 +72,13 @@ function buildSheetData(exam, student, report, school) {
       name: school?.name || "Your School",
       address: school?.address || "",
       contact: school?.phone || school?.email || "",
+      logo_url: school?.logo_url || "",
       exam_title: exam?.name || "ANNUAL EXAMINATION",
       exam_year: exam?.term || "",
     },
     student: {
       name: student?.name || "",
+      id_no: student?.id || student?.studentId || student?.student_id || "",
       class: student?.className || student?.class || "",
       section: student?.section || "",
       roll_no: student?.rollNo || student?.roll_no || "",
@@ -69,15 +90,10 @@ function buildSheetData(exam, student, report, school) {
       highest_total: report?.totalMax || 0,
       percentage: report?.overallPct || 0,
       attendance: "",
-      rank: "",
-      rank_section: "",
-      extracurricular_grade: overallGrade,
-      teacher_views: `${report?.overall?.remark || ""} — ${report?.allPass ? "PASS" : "NEEDS ATTENTION"}`,
     },
     footer: {
       result_issue_date: "",
       class_teacher: "",
-      exam_controller: "",
       principal: "",
     },
   };
@@ -97,6 +113,9 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
       remark: row.remark,
     };
   });
+  const attendance = attendanceDetails(sheetData.summary.attendance);
+  const minimumRows = Math.max(7, sheetData.subjects.length);
+  const issueDate = sheetData.footer.result_issue_date || todayBs();
 
   return (
     <Modal title="" onClose={onClose} wide>
@@ -112,134 +131,120 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, onClo
               color: #111;
               border: 1px solid #e2e8f0;
               box-sizing: border-box;
-              padding: 12mm 15mm 14mm;
+              padding: 10mm 12mm 10mm;
               font-family: Arial, Helvetica, sans-serif;
             }
-            .gradesheet-header { text-align: center; margin-bottom: 6mm; }
-            .gradesheet-school-name { font-size: 20px; font-weight: 700; margin-bottom: 1mm; }
+            .gradesheet-header { position: relative; text-align: center; margin-bottom: 4mm; min-height: 31mm; }
+            .gradesheet-logo { position: absolute; left: 0; top: 0; width: 23mm; height: 23mm; object-fit: contain; }
+            .gradesheet-school-name { font-size: 17px; font-weight: 700; margin-bottom: 1mm; }
             .gradesheet-school-meta { font-size: 10px; color: #334155; margin-bottom: 1mm; }
-            .gradesheet-school-address { font-size: 12px; }
-            .gradesheet-exam-title { font-size: 15px; font-weight: 700; margin-top: 3mm; }
-            .gradesheet-exam-year { font-size: 11px; font-weight: 700; margin-top: 1mm; }
-            .gradesheet-label { display: inline-block; margin-top: 4mm; padding: 2mm 8mm; border: 1px solid #000; font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
-            .gradesheet-student-info { font-size: 11px; font-weight: 700; margin: 6mm 0 3mm; }
-            .gradesheet-student-info span { display: inline-block; margin-right: 10mm; }
+            .gradesheet-school-address { font-size: 11px; }
+            .gradesheet-label { margin-top: 2mm; font-size: 17px; font-weight: 700; font-style: italic; }
+            .gradesheet-exam-title { font-size: 12px; font-weight: 700; margin-top: 1mm; }
+            .gradesheet-exam-year { font-size: 10px; font-weight: 700; margin-top: 1mm; }
+            .gradesheet-student-info { display: grid; grid-template-columns: 1.2fr 1fr .8fr .75fr; gap: 2mm; font-size: 10px; font-weight: 700; margin: 3mm 0 2mm; }
             .gradesheet-table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
-            .gradesheet-table th, .gradesheet-table td { border: 1px solid #000; padding: 1.2mm 1mm; text-align: center; vertical-align: middle; }
+            .gradesheet-table th, .gradesheet-table td { border: 1px solid #000; padding: 1.05mm .8mm; text-align: center; vertical-align: middle; }
             .gradesheet-table th { background: #f8fafc; font-weight: 700; }
             .gradesheet-table .subject-name { text-align: left; padding-left: 2mm; }
+            .gradesheet-table thead tr:first-child th:nth-child(3) { border-bottom: none; }
             .gradesheet-summary-row td { font-weight: 700; }
-            .gradesheet-flex { display: flex; gap: 4mm; margin-top: 4mm; align-items: flex-start; }
-            .gradesheet-left { flex: 1.1; }
-            .gradesheet-right { flex: 0.9; }
-            .gradesheet-card { border: 1px solid #000; box-sizing: border-box; }
-            .gradesheet-card-title { padding: 2mm 3mm; font-size: 9px; font-weight: 700; border-bottom: 1px solid #000; }
-            .gradesheet-card-body { padding: 2mm 3mm; font-size: 9px; }
-            .gradesheet-scale-table { font-size: 8px; }
-            .gradesheet-scale-table th, .gradesheet-scale-table td { padding: 1.2mm; }
-            .gradesheet-box-list { margin: 0; padding: 0; list-style: none; }
-            .gradesheet-box-list li { border: 1px solid #000; padding: 2.2mm 3mm; margin-bottom: 2mm; font-size: 9px; font-weight: 700; }
-            .gradesheet-extra { display: flex; margin-top: 3mm; }
-            .gradesheet-extra-left { flex: 0.6; border: 1px solid #000; padding: 3mm; font-size: 8.7px; font-weight: 700; }
-            .gradesheet-extra-right { flex: 0.4; border: 1px solid #000; border-left: none; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px; }
-            .gradesheet-teacher { margin-top: 3mm; border: 1px solid #000; padding: 3mm; min-height: 26mm; }
-            .gradesheet-teacher-title { font-size: 9px; font-weight: 700; margin-bottom: 2mm; }
-            .gradesheet-teacher-body { font-size: 9px; }
-            @media print { .sm-no-print { display: none !important; } .gradesheet-page { border: none; padding: 10mm 12mm 12mm; } }
+            .gradesheet-gpa { border: 1px solid #000; border-top: none; text-align: center; padding: 2mm; font-size: 10px; font-weight: 700; }
+            .gradesheet-gpa strong { margin-left: 4mm; }
+            .gradesheet-flex { display: flex; gap: 0; margin-top: 4mm; align-items: stretch; }
+            .gradesheet-left { flex: 1.55; }
+            .gradesheet-right { flex: .8; }
+            .gradesheet-scale-table, .gradesheet-attendance-table { width: 100%; height: 100%; border-collapse: collapse; font-size: 8px; }
+            .gradesheet-scale-table th, .gradesheet-scale-table td, .gradesheet-attendance-table th, .gradesheet-attendance-table td { border: 1px solid #000; padding: 1.05mm .8mm; text-align: center; }
+            .gradesheet-scale-title, .gradesheet-attendance-title { font-weight: 700; font-size: 9px; }
+            .gradesheet-footer { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 12mm; font-size: 9px; }
+            .gradesheet-seal { width: 22mm; height: 22mm; border: 1px solid #555; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 7px; font-weight: 700; text-align: center; }
+            .gradesheet-seal img { width: 100%; height: 100%; object-fit: contain; }
+            .gradesheet-signatures { display: flex; flex: 1; justify-content: space-around; gap: 7mm; margin-left: 8mm; }
+            .gradesheet-sign { width: 28%; text-align: center; }
+            .gradesheet-sign-line { border-top: 1px solid #000; height: 1px; margin-bottom: 2mm; }
+            @media print { .sm-no-print { display: none !important; } .gradesheet-page { border: none; padding: 8mm 10mm; } }
           `}</style>
           <div className="gradesheet-page">
             <div className="gradesheet-header">
+              {sheetData.school.logo_url && <img className="gradesheet-logo" src={sheetData.school.logo_url} alt="School logo" />}
               <div className="gradesheet-school-name">{sheetData.school.name || "SCHOOL NAME"}</div>
               <div className="gradesheet-school-meta gradesheet-school-address">{sheetData.school.address || ""}</div>
               <div className="gradesheet-school-meta">{sheetData.school.contact || ""}</div>
-              <div className="gradesheet-exam-title">{sheetData.school.exam_title || "ANNUAL EXAMINATION"}</div>
-              <div className="gradesheet-exam-year">{sheetData.school.exam_year || ""}</div>
               <div className="gradesheet-label">GRADE SHEET</div>
+              <div className="gradesheet-exam-title">{sheetData.school.exam_title || "ANNUAL EXAMINATION"}{sheetData.school.exam_year ? ` — ${sheetData.school.exam_year}` : ""}</div>
             </div>
             <div className="gradesheet-student-info">
               <span>Name: {sheetData.student.name}</span>
               <span>Class: {sheetData.student.class}</span>
               <span>Section: {sheetData.student.section}</span>
-              <span>Roll No.: {sheetData.student.roll_no}</span>
+              <span>ID No.: {sheetData.student.id_no || sheetData.student.roll_no || ""} &nbsp; Roll No.: {sheetData.student.roll_no}</span>
             </div>
             <table className="gradesheet-table">
               <thead>
                 <tr>
                   <th>S.N.</th>
                   <th>Subject</th>
-                  <th>Credit Hour</th>
-                  <th>Th.</th>
-                  <th>Pr.</th>
+                  <th colSpan="2">Obtained Grade</th>
                   <th>Final Grade</th>
                   <th>Grade Point</th>
-                  <th>Total Marks</th>
-                  <th>Highest Marks</th>
+                  <th rowSpan="2">Remarks</th>
+                </tr>
+                <tr>
+                  <th></th><th></th><th>Th.</th><th>Pr.</th><th></th><th></th>
                 </tr>
               </thead>
               <tbody>
-                {sheetData.subjects.map((subject, idx) => (
-                  <tr key={`${subject.name}-${idx}`}>
+                {Array.from({ length: minimumRows }, (_, idx) => {
+                  const subject = sheetData.subjects[idx];
+                  return (
+                  <tr key={`${subject?.name || "blank"}-${idx}`}>
                     <td>{idx + 1}</td>
-                    <td className="subject-name">{subject.name}</td>
-                    <td>{subject.credit_hour}</td>
-                    <td>{subject.th_grade}</td>
-                    <td>{subject.pr_grade}</td>
-                    <td>{subject.final_grade}</td>
-                    <td>{subject.grade_point}</td>
-                    <td>{subject.total_marks}</td>
-                    <td>{subject.highest_marks}</td>
+                    <td className="subject-name">{subject?.name || ""}</td>
+                    <td>{subject?.th_grade || ""}</td>
+                    <td>{subject?.pr_grade || ""}</td>
+                    <td>{subject?.final_grade || ""}</td>
+                    <td>{subject?.grade_point ?? ""}</td>
+                    <td></td>
                   </tr>
-                ))}
-                <tr className="gradesheet-summary-row">
-                  <td colSpan="6">Grade Point Average (GPA):</td>
-                  <td>{sheetData.summary.gpa}</td>
-                  <td colSpan="2"></td>
-                </tr>
-                <tr className="gradesheet-summary-row">
-                  <td colSpan="6">Total Marks:</td>
-                  <td colSpan="1"></td>
-                  <td>{sheetData.summary.total_marks}</td>
-                  <td></td>
-                </tr>
+                  );
+                })}
               </tbody>
             </table>
+            <div className="gradesheet-gpa">Grade Point Average (GPA): <strong>{sheetData.summary.gpa}</strong></div>
             <div className="gradesheet-flex">
               <div className="gradesheet-left">
-                <div className="gradesheet-card">
-                  <div className="gradesheet-card-title">Grading / GPA System</div>
-                  <div className="gradesheet-card-body">
-                    <table className="gradesheet-scale-table">
-                      <thead>
-                        <tr><th>Interval</th><th>Grade Point</th><th>Grade</th><th>Remarks</th></tr>
-                      </thead>
-                      <tbody>
-                        {scaleRows.map((row) => (
-                          <tr key={`${row.grade}-${row.interval}`}>
-                            <td>{row.interval}</td>
-                            <td>{row.point}</td>
-                            <td>{row.grade}</td>
-                            <td>{row.remark}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                <table className="gradesheet-scale-table">
+                  <thead>
+                    <tr><th colSpan="4" className="gradesheet-scale-title">Letter Grading Is Assign As:</th></tr>
+                    <tr><th>Interval in %</th><th>Grade</th><th>Description</th><th>Grade Point</th></tr>
+                  </thead>
+                  <tbody>
+                    {scaleRows.map((row) => (
+                      <tr key={`${row.grade}-${row.interval}`}>
+                        <td>{row.interval}</td><td>{row.grade}</td><td>{row.remark}</td><td>{row.point}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
               <div className="gradesheet-right">
-                <ul className="gradesheet-box-list">
-                  <li>Percentage: {sheetData.summary.percentage}%</li>
-                  <li>Attendance: {sheetData.summary.attendance}</li>
-                  <li>Rank: {sheetData.summary.rank} / Section Rank: {sheetData.summary.rank_section}</li>
-                </ul>
-                <div className="gradesheet-extra">
-                  <div className="gradesheet-extra-left">EXTRACURRICULAR ACTIVITIES</div>
-                  <div className="gradesheet-extra-right">{sheetData.summary.extracurricular_grade}</div>
-                </div>
-                <div className="gradesheet-teacher">
-                  <div className="gradesheet-teacher-title">Teacher Views:</div>
-                  <div className="gradesheet-teacher-body">{sheetData.summary.teacher_views}</div>
-                </div>
+                <table className="gradesheet-attendance-table">
+                  <thead><tr><th colSpan="2" className="gradesheet-attendance-title">Attendance</th></tr></thead>
+                  <tbody>
+                    <tr><th>Working Days</th><td>{attendance.working}</td></tr>
+                    <tr><th>Attend Days</th><td>{attendance.attended}</td></tr>
+                    <tr><th>Absent Days</th><td>{attendance.absent}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="gradesheet-footer">
+              <div className="gradesheet-seal">{sheetData.school.logo_url ? <img src={sheetData.school.logo_url} alt="School seal" /> : "SCHOOL SEAL"}</div>
+              <div className="gradesheet-signatures">
+                <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>Class Teacher</div>
+                <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>{issueDate}</div>
+                <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>Principal</div>
               </div>
             </div>
           </div>

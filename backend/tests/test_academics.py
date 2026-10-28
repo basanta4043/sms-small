@@ -44,7 +44,7 @@ def test_exam_result_and_gradesheet_flow() -> None:
         "term": "2026 Term 1",
         "class_name": "Grade 5",
         "subjects": [
-            {"name": "Math", "maxMarks": 100, "passMarks": 33},
+            {"name": "Math", "hasPractical": True, "thMaxMarks": 75, "prMaxMarks": 25, "maxMarks": 100, "passMarks": 33},
             {"name": "Science", "maxMarks": 100, "passMarks": 33},
         ],
     }
@@ -71,7 +71,7 @@ def test_exam_result_and_gradesheet_flow() -> None:
         "attendance": "85/90",
         "extracurricular_activities": "Football team — A",
         "marks": [
-            {"subject": "Math", "obtained": 80, "max_marks": 100},
+            {"subject": "Math", "thObtained": 60, "prObtained": 20, "obtained": 80, "maxMarks": 100},
             {"subject": "Science", "obtained": 72, "max_marks": 100},
         ],
     }
@@ -88,6 +88,10 @@ def test_exam_result_and_gradesheet_flow() -> None:
     assert gradesheet_resp.status_code == 200, gradesheet_resp.text
     gradesheet = gradesheet_resp.json()
     assert gradesheet["report"]["rows"][0]["obtained"] == 80
+    assert gradesheet["report"]["rows"][0]["thGrade"] == "A"
+    assert gradesheet["report"]["rows"][0]["prGrade"] == "A"
+    assert gradesheet["sheet"]["subjects"][0]["th_grade"] == "A"
+    assert gradesheet["sheet"]["subjects"][0]["pr_grade"] == "A"
     assert gradesheet["report"]["overallPct"] >= 70
     assert gradesheet["sheet"]["student"]["name"] == student_payload["name"]
     assert gradesheet["sheet"]["summary"]["percentage"] >= 70

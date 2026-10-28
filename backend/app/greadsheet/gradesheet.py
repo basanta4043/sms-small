@@ -409,20 +409,6 @@ class GradesheetPDF:
                    align="center")
         return y_bot
 
-    def draw_teacher_views(self, y_top, x_start, width, summary):
-        self.text(x_start, y_top, "Teacher Views:", "Helvetica-Bold", 9.5)
-        y_top -= 3 * mm
-        h = 20 * mm
-        y_bot = y_top - h
-        self.rect(x_start, y_bot, width, h)
-        lines = self.wrap_text(summary.get("teacher_views", ""), "Helvetica", 9.5,
-                                 width - 4 * mm)
-        ty = y_top - 5 * mm
-        for ln in lines[:4]:
-            self.text(x_start + 2 * mm, ty, ln, "Helvetica", 9.5)
-            ty -= 4.5 * mm
-        return y_bot
-
     def draw_footer(self, y, footer):
         cx = (self.left + self.right) / 2
         if footer.get("result_issue_date"):
@@ -431,8 +417,7 @@ class GradesheetPDF:
         y -= 14 * mm
         labels = [
             ("Class Teacher", self.left + self.width * 0.08),
-            ("Result Issue Date", cx),
-            ("Exam Controller", self.left + self.width * 0.68),
+            (footer.get("result_issue_date") or "Date of Issue", cx),
             ("Principal", self.right - self.width * 0.04),
         ]
         for label, x in labels:
@@ -467,7 +452,6 @@ def generate_gradesheet(data, output_path):
     side_y = doc.draw_side_info(y, summary, col_w)
 
     y2 = doc.draw_extracurricular(side_y, tv_x, tv_w, summary)
-    doc.draw_teacher_views(y2 - 3 * mm, tv_x, tv_w, summary)
 
     footer_y = min(y2, scale_bottom) - 14 * mm
     doc.draw_footer(footer_y, footer)

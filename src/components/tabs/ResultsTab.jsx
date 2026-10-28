@@ -22,7 +22,12 @@ export default function ResultsTab({ exams, students, results, setResults, token
     const existing = results.find((r) => String(r.examId) === String(examId) && String(r.studentId) === String(sId));
     if (existing) {
       const m = {};
-      existing.marks.forEach((mk) => { m[mk.subject] = mk.obtained; });
+      existing.marks.forEach((mk) => {
+        m[mk.subject] = {
+          th: mk.thObtained ?? mk.th_obtained ?? mk.obtained ?? "",
+          pr: mk.prObtained ?? mk.pr_obtained ?? "",
+        };
+      });
       setMarks(m);
       setAttendance(existing.attendance || "");
       setExtracurricularActivities(existing.extracurricularActivities || "");
@@ -37,7 +42,19 @@ export default function ResultsTab({ exams, students, results, setResults, token
     if (!exam || !studentId) return;
     setErr("");
     try {
-      const markRows = exam.subjects.map((sub) => ({ subject: sub.name, obtained: Number(marks[sub.name]) || 0, maxMarks: sub.maxMarks }));
+      const markRows = exam.subjects.map((sub) => {
+        const thObtained = Number(marks[sub.name]?.th) || 0;
+        const prObtained = sub.hasPractical ? Number(marks[sub.name]?.pr) || 0 : 0;
+        return {
+          subject: sub.name,
+          thObtained,
+          prObtained,
+          obtained: thObtained + prObtained,
+          thMaxMarks: sub.thMaxMarks ?? sub.maxMarks,
+          prMaxMarks: sub.hasPractical ? sub.prMaxMarks : 0,
+          maxMarks: sub.maxMarks,
+        };
+      });
       const data = await api("/results", {
         method: "POST",
         body: {
@@ -102,9 +119,16 @@ export default function ResultsTab({ exams, students, results, setResults, token
             {studentId ? (
               <div style={{ padding: 18 }}>
                 {exam.subjects.map((sub) => (
-                  <Field key={sub.name} label={`${sub.name} (out of ${sub.maxMarks})`}>
-                    <input className="sm-input" type="number" min="0" max={sub.maxMarks} value={marks[sub.name] ?? ""} onChange={(e) => setMarks((p) => ({ ...p, [sub.name]: e.target.value }))} />
-                  </Field>
+                  <div key={sub.name} style={{ display: "grid", gridTemplateColumns: sub.hasPractical ? "1fr 1fr" : "1fr", gap: 12 }}>
+                    <Field label={`${sub.name} — TH (out of ${sub.thMaxMarks ?? sub.maxMarks})`}>
+                      <input className="sm-input" type="number" min="0" max={sub.thMaxMarks ?? sub.maxMarks} value={marks[sub.name]?.th ?? ""} onChange={(e) => setMarks((p) => ({ ...p, [sub.name]: { ...p[sub.name], th: e.target.value } }))} />
+                    </Field>
+                    {sub.hasPractical && (
+                      <Field label={`${sub.name} — PR (out of ${sub.prMaxMarks})`}>
+                        <input className="sm-input" type="number" min="0" max={sub.prMaxMarks} value={marks[sub.name]?.pr ?? ""} onChange={(e) => setMarks((p) => ({ ...p, [sub.name]: { ...p[sub.name], pr: e.target.value } }))} />
+                      </Field>
+                    )}
+                  </div>
                 ))}
                 <Field label="Attendance (e.g. 85/90)">
                   <input className="sm-input" value={attendance} onChange={(e) => setAttendance(e.target.value)} placeholder="Present days / total days" />

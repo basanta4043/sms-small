@@ -21,6 +21,14 @@ export function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function todayBs() {
+  try {
+    return new NepaliDate(new Date()).format("YYYY-MM-DD");
+  } catch (error) {
+    return "";
+  }
+}
+
 export function isoToBs(isoDate) {
   if (!isoDate) return "";
   try {

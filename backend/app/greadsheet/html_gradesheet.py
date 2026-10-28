@@ -161,9 +161,6 @@ def render_gradesheet_html(data: dict[str, Any]) -> str:
     .extra {{ display: flex; margin-top: 3mm; }}
     .extra .left {{ flex: 0.6; border: 1px solid #000; padding: 3mm; font-size: 8.7px; font-weight: 700; }}
     .extra .right {{ flex: 0.4; border: 1px solid #000; border-left: none; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px; }}
-    .teacher {{ margin-top: 3mm; border: 1px solid #000; padding: 3mm; min-height: 26mm; }}
-    .teacher-title {{ font-size: 9px; font-weight: 700; margin-bottom: 2mm; }}
-    .teacher-body {{ font-size: 9px; }}
     .footer {{ margin-top: 10mm; text-align: center; font-size: 8.5px; }}
     .footer-line {{ border-top: 1px solid #000; width: 70%; margin: 8mm auto 2mm; }}
     .signatures {{ display: flex; justify-content: space-between; font-size: 9px; margin-top: 8mm; }}
@@ -253,10 +250,6 @@ def render_gradesheet_html(data: dict[str, Any]) -> str:
           <div class=\"left\">EXTRACURRICULAR ACTIVITIES</div>
           <div class=\"right\">{html.escape(str(summary.get('extracurricular_grade', '')))}</div>
         </div>
-        <div class=\"teacher\">
-          <div class=\"teacher-title\">Teacher Views:</div>
-          <div class=\"teacher-body\">{html.escape(str(summary.get('teacher_views', '')))}</div>
-        </div>
       </div>
     </div>
 
@@ -266,7 +259,6 @@ def render_gradesheet_html(data: dict[str, Any]) -> str:
       <div class=\"signatures\">
         <div class=\"sign\">Class Teacher<div class=\"line\"></div></div>
         <div class=\"sign\">Result Issue Date<div class=\"line\"></div></div>
-        <div class=\"sign\">Exam Controller<div class=\"line\"></div></div>
         <div class=\"sign\">Principal<div class=\"line\"></div></div>
       </div>
     </div>
