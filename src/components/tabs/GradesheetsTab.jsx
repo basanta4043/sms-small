@@ -191,7 +191,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, rank,
             <div className="gradesheet-student-info">
               <span>Name: {sheetData.student.name}</span>
               <span>Class: {sheetData.student.class}</span>
-              <span>Roll No.: {sheetData.student.roll_no} &nbsp; Class Rank: {rank}</span>
+              <span>Roll No.: {sheetData.student.roll_no} </span>
             </div>
             <table className="gradesheet-table">
               <thead>
@@ -259,7 +259,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, rank,
               </div>
               <div className="gradesheet-signatures">
                 <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>Class Teacher</div>
-                <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>Issue Date</div>
+                <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>Date of Issue</div>
                 <div className="gradesheet-sign"><div className="gradesheet-sign-line"></div>Principal</div>
               </div>
             </div>
