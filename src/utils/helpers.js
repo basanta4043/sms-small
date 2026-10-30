@@ -116,14 +116,14 @@ export function normalizeImageUrl(value) {
 }
 
 export const DEFAULT_GRADE_SCALE = [
-  { min: 90, grade: "A+", remark: "Outstanding" },
-  { min: 80, grade: "A", remark: "Excellent" },
-  { min: 70, grade: "B+", remark: "Very Good" },
-  { min: 60, grade: "B", remark: "Good" },
-  { min: 50, grade: "C+", remark: "Satisfactory" },
-  { min: 40, grade: "C", remark: "Fair" },
-  { min: 33, grade: "D", remark: "Needs Improvement" },
-  { min: 0, grade: "F", remark: "Fail" },
+  { min: 90, grade: "A+", gradePoint: 4.0, remark: "Outstanding" },
+  { min: 80, grade: "A", gradePoint: 3.6, remark: "Excellent" },
+  { min: 70, grade: "B+", gradePoint: 3.2, remark: "Very Good" },
+  { min: 60, grade: "B", gradePoint: 2.8, remark: "Good" },
+  { min: 50, grade: "C+", gradePoint: 2.4, remark: "Satisfactory" },
+  { min: 40, grade: "C", gradePoint: 2.0, remark: "Fair" },
+  { min: 33, grade: "D", gradePoint: 1.6, remark: "Needs Improvement" },
+  { min: 0, grade: "F", gradePoint: 0.0, remark: "Fail" },
 ];
 
 export function gradeFor(pct, scale) {

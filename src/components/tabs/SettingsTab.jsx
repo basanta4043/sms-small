@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Check } from "lucide-react";
 import { Field } from "../Shared";
 import { api } from "../../api/client";
-import { normalizeImageUrl } from "../../utils/helpers";
+import { DEFAULT_GRADE_SCALE, normalizeImageUrl } from "../../utils/helpers";
 
 export default function SettingsTab({ school, setSchool, gradeScale, setGradeScale, token }) {
   const [name, setName] = useState(school.name);
@@ -35,7 +35,7 @@ export default function SettingsTab({ school, setSchool, gradeScale, setGradeSca
   }
 
   function updateGrade(i, k, v) {
-    setGradeScale((p) => p.map((g, idx) => (idx === i ? { ...g, [k]: k === "min" ? Number(v) : v } : g)));
+    setGradeScale((p) => p.map((g, idx) => (idx === i ? { ...g, [k]: ["min", "gradePoint"].includes(k) ? Number(v) : v } : g)));
   }
 
   return (
@@ -52,13 +52,16 @@ export default function SettingsTab({ school, setSchool, gradeScale, setGradeSca
       </div>
       <div className="sm-panel" style={{ padding: 20 }}>
         <h3 className="sm-display" style={{ marginTop: 0, fontSize: 17 }}>Grade scale</h3>
-        <p className="sm-note" style={{ marginBottom: 14 }}>Used to compute grades on gradesheets. Minimum percentage for each grade.</p>
+        <p className="sm-note" style={{ marginBottom: 14 }}>Set the minimum percentage and grade-point value for each letter grade.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "76px 62px minmax(100px, 1fr) 80px", gap: 8, marginBottom: 8, color: "var(--slate)", fontSize: 11, fontWeight: 700 }}>
+          <span>Minimum %</span><span>Grade</span><span>Remark</span><span>Grade point</span>
+        </div>
         {gradeScale.map((g, i) => (
-          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
-            <input className="sm-input" style={{ maxWidth: 90 }} type="number" value={g.min} onChange={(e) => updateGrade(i, "min", e.target.value)} />
-            <span style={{ fontSize: 12, color: "var(--slate)" }}>% and above →</span>
-            <input className="sm-input" style={{ maxWidth: 70 }} value={g.grade} onChange={(e) => updateGrade(i, "grade", e.target.value)} />
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "76px 62px minmax(100px, 1fr) 80px", gap: 8, marginBottom: 8, alignItems: "center" }}>
+            <input className="sm-input" type="number" value={g.min} onChange={(e) => updateGrade(i, "min", e.target.value)} />
+            <input className="sm-input" value={g.grade} onChange={(e) => updateGrade(i, "grade", e.target.value)} />
             <input className="sm-input" value={g.remark} onChange={(e) => updateGrade(i, "remark", e.target.value)} />
+            <input className="sm-input" type="number" min="0" step="0.1" value={g.gradePoint ?? DEFAULT_GRADE_SCALE.find((row) => row.grade === g.grade)?.gradePoint ?? 0} onChange={(e) => updateGrade(i, "gradePoint", e.target.value)} />
           </div>
         ))}
       </div>

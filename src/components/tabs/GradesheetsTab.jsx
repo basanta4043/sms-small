@@ -28,18 +28,11 @@ function computeReport(exam, student, result, gradeScale) {
   return { rows, totalMax, totalObtained, overallPct, overall, allPass };
 }
 
-function gradePointForGrade(grade) {
-  const mapping = {
-    "A+": 4.0,
-    A: 3.6,
-    "B+": 3.2,
-    B: 2.8,
-    "C+": 2.4,
-    C: 2.0,
-    D: 1.6,
-    F: 0.0,
-  };
-  return mapping[String(grade || "").trim()] ?? 0.0;
+function gradePointForGrade(grade, gradeScale) {
+  const row = (gradeScale || []).find((item) => String(item.grade || "").trim() === String(grade || "").trim());
+  if (Number.isFinite(Number(row?.gradePoint))) return Number(row.gradePoint);
+  const defaults = { "A+": 4.0, A: 3.6, "B+": 3.2, B: 2.8, "C+": 2.4, C: 2.0, D: 1.6, F: 0.0 };
+  return defaults[String(grade || "").trim()] ?? 0.0;
 }
 
 function attendanceDetails(value) {
@@ -62,21 +55,21 @@ function classRankForStudent(exam, classStudents, results, examId, studentId, gr
     );
     if (!result) return [];
     const report = computeReport(exam, classStudent, result, gradeScale);
-    return [{ studentId: String(classStudent.id), gpa: gradePointForGrade(report.overall.grade) }];
+    return [{ studentId: String(classStudent.id), gpa: gradePointForGrade(report.overall.grade, gradeScale) }];
   });
   const current = classScores.find((item) => item.studentId === String(studentId));
   if (!current) return "—";
   return classScores.filter((item) => item.gpa > current.gpa).length + 1;
 }
 
-function buildSheetData(exam, student, report, school) {
+function buildSheetData(exam, student, report, school, gradeScale) {
   const subjectRows = (report?.rows || []).map((row, idx) => ({
     name: row.subject || `Subject ${idx + 1}`,
     credit_hour: 1,
     th_grade: row.thGrade || row.grade,
     pr_grade: row.prGrade || "",
     final_grade: row.grade,
-    grade_point: Number(gradePointForGrade(row.grade).toFixed(2)),
+    grade_point: Number(gradePointForGrade(row.grade, gradeScale).toFixed(2)),
     total_marks: row.obtained,
     highest_marks: row.maxMarks,
   }));
@@ -99,7 +92,7 @@ function buildSheetData(exam, student, report, school) {
     },
     subjects: subjectRows,
     summary: {
-      gpa: Number(gradePointForGrade(overallGrade).toFixed(2)),
+      grade: overallGrade,
       total_marks: report?.totalObtained || 0,
       highest_total: report?.totalMax || 0,
       percentage: report?.overallPct || 0,
@@ -114,7 +107,18 @@ function buildSheetData(exam, student, report, school) {
 }
 
 function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, rank, onClose }) {
-  const sheetData = sheet || buildSheetData(exam, student, report, school);
+  const sourceSheetData = sheet || buildSheetData(exam, student, report, school, gradeScale);
+  const sheetData = {
+    ...sourceSheetData,
+    subjects: (sourceSheetData.subjects || []).map((subject) => ({
+      ...subject,
+      grade_point: Number(gradePointForGrade(subject.final_grade, gradeScale).toFixed(2)),
+    })),
+    summary: {
+      ...sourceSheetData.summary,
+      grade: report?.overall?.grade || sourceSheetData.summary?.grade || "",
+    },
+  };
   const scaleRows = (gradeScale || []).map((row, idx) => {
     const next = gradeScale[idx + 1];
     const min = row.min;
@@ -122,7 +126,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, rank,
     const interval = min >= 90 ? `${min}% to 100%` : `${min}% to Below ${upper}%`;
     return {
       interval,
-      point: Number(row.min ? (row.min / 25).toFixed(1) : 0).toString(),
+      point: Number(gradePointForGrade(row.grade, gradeScale).toFixed(2)).toString(),
       grade: row.grade,
       remark: row.remark,
     };
@@ -224,12 +228,12 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, rank,
                 })}
               </tbody>
             </table>
-            <div className="gradesheet-gpa">Grade Point Average (GPA): <strong>{sheetData.summary.gpa}</strong></div>
+            <div className="gradesheet-gpa">Grade (letter): <strong>{sheetData.summary.grade}</strong></div>
             <div className="gradesheet-flex">
               <div className="gradesheet-left">
                 <table className="gradesheet-scale-table">
                   <thead>
-                    <tr><th colSpan="4" className="gradesheet-scale-title">Letter Grading Is Assign As:</th></tr>
+                    <tr><th colSpan="4" className="gradesheet-scale-title">Letter Grading Is Assigned As:</th></tr>
                     <tr><th>Interval in %</th><th>Grade</th><th>Description</th><th>Grade Point</th></tr>
                   </thead>
                   <tbody>
