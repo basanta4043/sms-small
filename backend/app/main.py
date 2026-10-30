@@ -216,7 +216,7 @@ def _grade_for_percentage(pct: float) -> dict[str, Any]:
         return {"grade": "C", "remark": "Fair"}
     if pct >= 33:
         return {"grade": "D", "remark": "Needs Improvement"}
-    return {"grade": "F", "remark": "Fail"}
+    return {"grade": "NG", "remark": "Not Graded"}
 
 
 def _grade_point_for_grade(grade: str | None) -> float:
@@ -228,7 +228,7 @@ def _grade_point_for_grade(grade: str | None) -> float:
         "C+": 2.4,
         "C": 2.0,
         "D": 1.6,
-        "F": 0.0,
+        "NG": 0.0,
     }
     return mapping.get(str(grade or "").strip(), 0.0)
 

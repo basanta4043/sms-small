@@ -3,7 +3,7 @@ import { Printer } from "lucide-react";
 import { Modal, Empty } from "../Shared";
 import { Field } from "../Shared";
 import { api } from "../../api/client";
-import { gradeFor } from "../../utils/helpers";
+import { DEFAULT_GRADE_SCALE, gradeFor } from "../../utils/helpers";
 
 function computeReport(exam, student, result, gradeScale) {
   const rows = exam.subjects.map((sub) => {
@@ -31,7 +31,7 @@ function computeReport(exam, student, result, gradeScale) {
 function gradePointForGrade(grade, gradeScale) {
   const row = (gradeScale || []).find((item) => String(item.grade || "").trim() === String(grade || "").trim());
   if (Number.isFinite(Number(row?.gradePoint))) return Number(row.gradePoint);
-  const defaults = { "A+": 4.0, A: 3.6, "B+": 3.2, B: 2.8, "C+": 2.4, C: 2.0, D: 1.6, F: 0.0 };
+  const defaults = { "A+": 4.0, A: 3.6, "B+": 3.2, B: 2.8, "C+": 2.4, C: 2.0, D: 1.6, NG: 0.0, F: 0.0 };
   return defaults[String(grade || "").trim()] ?? 0.0;
 }
 
@@ -120,10 +120,10 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, rank,
     },
   };
   const scaleRows = (gradeScale || []).map((row, idx) => {
+    const defaultRow = DEFAULT_GRADE_SCALE.find((item) => item.grade === row.grade);
     const next = gradeScale[idx + 1];
-    const min = row.min;
-    const upper = next ? next.min - 1 : 100;
-    const interval = min >= 90 ? `${min}% to 100%` : `${min}% to Below ${upper}%`;
+    const max = row.max ?? defaultRow?.max ?? (next ? Number(next.min) - 1 : 100);
+    const interval = `${row.min}% to ${max}%`;
     return {
       interval,
       point: Number(gradePointForGrade(row.grade, gradeScale).toFixed(2)).toString(),

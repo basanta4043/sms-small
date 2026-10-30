@@ -21,8 +21,20 @@ DEFAULT_GRADE_SCALE = [
     {"min": 50, "grade": "C+", "remark": "Satisfactory"},
     {"min": 40, "grade": "C", "remark": "Fair"},
     {"min": 33, "grade": "D", "remark": "Needs Improvement"},
-    {"min": 0, "grade": "F", "remark": "Fail"},
+    {"min": 0, "grade": "NG", "remark": "Not Graded"},
 ]
+
+
+def _normalize_grade_scale(scale):
+    normalized = []
+    for row in scale or DEFAULT_GRADE_SCALE:
+        item = dict(row)
+        if item.get("grade") == "F":
+            item["grade"] = "NG"
+            if item.get("remark") == "Fail":
+                item["remark"] = "Not Graded"
+        normalized.append(item)
+    return normalized
 
 class SchoolLoginView(LoginView):
     template_name = "registration/login.html"
@@ -46,14 +58,14 @@ def _grade(pct):
     for threshold, grade in ((90, "A+"), (80, "A"), (70, "B+"), (60, "B"), (50, "C+"), (40, "C"), (33, "D")):
         if pct >= threshold:
             return grade
-    return "F"
+    return "NG"
 
 
 def _grade_from_scale(pct, scale):
-    for row in sorted(scale or DEFAULT_GRADE_SCALE, key=lambda item: item.get("min", 0), reverse=True):
+    for row in sorted(_normalize_grade_scale(scale), key=lambda item: item.get("min", 0), reverse=True):
         if pct >= float(row.get("min", 0)):
-            return row.get("grade", "F")
-    return "F"
+            return row.get("grade", "NG")
+    return "NG"
 
 
 @login_required
@@ -62,6 +74,7 @@ def dashboard(request):
     school, created = School.objects.get_or_create(owner=user, defaults={"name": "", "grade_scale": DEFAULT_GRADE_SCALE})
     if created:
         school.grade_scale = DEFAULT_GRADE_SCALE
+    school.grade_scale = _normalize_grade_scale(school.grade_scale)
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "school":
@@ -147,7 +160,7 @@ def dashboard(request):
     edit_fee = get_object_or_404(FeeStructure, owner=user, pk=request.GET["edit_fee"]) if request.GET.get("edit_fee") else None
     edit_exam = get_object_or_404(Exam, owner=user, pk=request.GET["edit_exam"]) if request.GET.get("edit_exam") else None
     context = {
-        "school": school, "grade_scale": school.grade_scale or DEFAULT_GRADE_SCALE, "students": Student.objects.filter(owner=user), "fees": FeeStructure.objects.filter(owner=user),
+        "school": school, "grade_scale": school.grade_scale, "students": Student.objects.filter(owner=user), "fees": FeeStructure.objects.filter(owner=user),
         "invoices": Invoice.objects.filter(owner=user).select_related("student").order_by("-date", "-id"), "payments_total": Payment.objects.filter(owner=user).aggregate(total=Sum("amount"))["total"] or 0,
         "exams": exams, "results": results, "student_form": StudentForm(instance=edit_student), "fee_form": FeeStructureForm(instance=edit_fee), "exam_form": ExamForm(instance=edit_exam), "school_form": SchoolForm(instance=school),
         "nav_tabs": [("dashboard", "Overview"), ("students", "Students"), ("fees", "Fees"), ("invoices", "Invoices"), ("exams", "Exams"), ("results", "Results"), ("settings", "Settings")],
@@ -159,6 +172,7 @@ def dashboard(request):
 def gradesheet(request, result_id):
     result = get_object_or_404(Result, owner=request.user, pk=result_id)
     school, _ = School.objects.get_or_create(owner=request.user, defaults={"grade_scale": DEFAULT_GRADE_SCALE})
+    school.grade_scale = _normalize_grade_scale(school.grade_scale)
     rows = []
     subjects = {str(subject.get("name", "")).lower(): subject for subject in result.exam.subjects}
     for mark in result.marks:

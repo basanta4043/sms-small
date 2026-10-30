@@ -19,7 +19,7 @@ DEFAULT_GRADING_SCALE = [
     ("50% to Below 60%", "2.4", "C+", "Satisfactory"),
     ("40% to Below 50%", "2.0", "C", "Acceptable"),
     ("35% to Below 40%", "1.6", "D", "Basic"),
-    ("Below 35%", "-", "NG", "Non Graded"),
+    ("Below 35%", "-", "NG", "Not Graded"),
 ]
 
 

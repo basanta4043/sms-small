@@ -13,7 +13,7 @@ import ExamsTab from "./components/tabs/ExamsTab";
 import ResultsTab from "./components/tabs/ResultsTab";
 import GradesheetsTab from "./components/tabs/GradesheetsTab";
 import SettingsTab from "./components/tabs/SettingsTab";
-import { DEFAULT_GRADE_SCALE, camelizeKeys, getDriveImageCandidates, normalizeImageUrl } from "./utils/helpers";
+import { DEFAULT_GRADE_SCALE, camelizeKeys, getDriveImageCandidates, normalizeGradeScale, normalizeImageUrl } from "./utils/helpers";
 import { loadJSON, saveJSON } from "./utils/storage";
 
 const TABS = [
@@ -141,7 +141,7 @@ export default function App() {
         payments: Array.isArray(feeState.payments) ? feeState.payments.map(camelizeKeys) : [],
         invoices: Array.isArray(feeState.invoices) ? feeState.invoices.map(camelizeKeys) : [],
       });
-      setAcademicsState(ac);
+      setAcademicsState({ ...ac, gradeScale: normalizeGradeScale(ac?.gradeScale) });
       setLoaded(true);
     })();
   }, []);

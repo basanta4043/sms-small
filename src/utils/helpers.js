@@ -116,15 +116,32 @@ export function normalizeImageUrl(value) {
 }
 
 export const DEFAULT_GRADE_SCALE = [
-  { min: 90, grade: "A+", gradePoint: 4.0, remark: "Outstanding" },
-  { min: 80, grade: "A", gradePoint: 3.6, remark: "Excellent" },
-  { min: 70, grade: "B+", gradePoint: 3.2, remark: "Very Good" },
-  { min: 60, grade: "B", gradePoint: 2.8, remark: "Good" },
-  { min: 50, grade: "C+", gradePoint: 2.4, remark: "Satisfactory" },
-  { min: 40, grade: "C", gradePoint: 2.0, remark: "Fair" },
-  { min: 33, grade: "D", gradePoint: 1.6, remark: "Needs Improvement" },
-  { min: 0, grade: "F", gradePoint: 0.0, remark: "Fail" },
+  { min: 90, max: 100, grade: "A+", gradePoint: 4.0, remark: "Outstanding" },
+  { min: 80, max: 89, grade: "A", gradePoint: 3.6, remark: "Excellent" },
+  { min: 70, max: 79, grade: "B+", gradePoint: 3.2, remark: "Very Good" },
+  { min: 60, max: 69, grade: "B", gradePoint: 2.8, remark: "Good" },
+  { min: 50, max: 59, grade: "C+", gradePoint: 2.4, remark: "Satisfactory" },
+  { min: 40, max: 49, grade: "C", gradePoint: 2.0, remark: "Fair" },
+  { min: 33, max: 39, grade: "D", gradePoint: 1.6, remark: "Needs Improvement" },
+  { min: 0, max: 32, grade: "NG", gradePoint: 0.0, remark: "Not Graded" },
 ];
+
+export function normalizeGradeScale(scale) {
+  if (!Array.isArray(scale) || scale.length === 0) return DEFAULT_GRADE_SCALE;
+  return scale.map((row, index) => {
+    const grade = row.grade === "F" ? "NG" : row.grade;
+    const defaultRow = DEFAULT_GRADE_SCALE.find((item) => item.grade === grade);
+    const next = scale[index + 1];
+    return {
+      ...defaultRow,
+      ...row,
+      grade,
+      max: row.max ?? defaultRow?.max ?? (next ? Number(next.min) - 1 : 100),
+      gradePoint: row.gradePoint ?? defaultRow?.gradePoint ?? 0,
+      remark: row.grade === "F" && row.remark === "Fail" ? "Not Graded" : row.remark ?? defaultRow?.remark ?? "",
+    };
+  });
+}
 
 export function gradeFor(pct, scale) {
   const s = [...scale].sort((a, b) => b.min - a.min);

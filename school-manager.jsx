@@ -34,13 +34,21 @@ const DEFAULT_GRADE_SCALE = [
   { min: 50, grade: "C+", remark: "Satisfactory" },
   { min: 40, grade: "C", remark: "Fair" },
   { min: 33, grade: "D", remark: "Needs Improvement" },
-  { min: 0, grade: "F", remark: "Fail" },
+  { min: 0, grade: "NG", remark: "Not Graded" },
 ];
 
 function gradeFor(pct, scale) {
   const s = [...scale].sort((a, b) => b.min - a.min);
   for (const row of s) if (pct >= row.min) return row;
   return s[s.length - 1];
+}
+
+function normalizeGradeScale(scale) {
+  return (Array.isArray(scale) && scale.length ? scale : DEFAULT_GRADE_SCALE).map((row) => ({
+    ...row,
+    grade: row.grade === "F" ? "NG" : row.grade,
+    remark: row.grade === "F" && row.remark === "Fail" ? "Not Graded" : row.remark,
+  }));
 }
 
 async function loadJSON(key, fallback) {
@@ -1164,7 +1172,7 @@ function MainApp({ onLogout }) {
         loadJSON("academics-data", { exams: [], results: [], gradeScale: DEFAULT_GRADE_SCALE }),
         loadJSON("auth", null),
       ]);
-      setSchoolState(s); setStudentsState(st); setFeeDataState(fd); setAcademicsState(ac); setAuth(a);
+      setSchoolState(s); setStudentsState(st); setFeeDataState(fd); setAcademicsState({ ...ac, gradeScale: normalizeGradeScale(ac?.gradeScale) }); setAuth(a);
       setLoaded(true);
     })();
   }, []);
