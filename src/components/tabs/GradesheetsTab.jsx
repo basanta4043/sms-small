@@ -228,7 +228,7 @@ function GradesheetDoc({ exam, student, report, school, sheet, gradeScale, rank,
                 })}
               </tbody>
             </table>
-            <div className="gradesheet-gpa">Grade (letter): <strong>{sheetData.summary.grade}</strong></div>
+            <div className="gradesheet-gpa">Grade Point Average (GPA): <strong>{sheetData.summary.gpa}  ({sheetData.summary.grade})</strong></div>
             <div className="gradesheet-flex">
               <div className="gradesheet-left">
                 <table className="gradesheet-scale-table">
